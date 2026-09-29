@@ -46,6 +46,15 @@ label{font-size:.82rem;color:#555;font-weight:600}body.dark label{color:#9aa5b1}
 body,body.dark{background:#fff!important;color:#000!important}
 .box,.c{background:#fff!important;border-color:#999!important}
 th{background:#ddd!important;color:#000!important}}
+a{color:inherit;text-decoration:none}
+a.lk{display:inline-flex;align-items:center;color:var(--m);font-weight:700;border-bottom:1px solid transparent;transition:color .15s,border-color .15s}
+a.lk:hover{color:#8a6a1f;border-bottom-color:var(--au)}body.dark a.lk{color:#9db8d6}body.dark a.lk:hover{color:var(--au)}
+.av{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--m);color:var(--au);font-size:.9rem;font-weight:800;margin-left:10px;flex:none}
+.sub{display:block;padding-right:42px;opacity:.65;font-size:.78rem}
+#ss{width:100%;margin:0 0 12px;font-size:1.05rem;padding:14px 16px;border-radius:10px}
+.sbar{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;border-bottom:2px solid var(--ln)}
+.sbar .tabs{border:0;margin:0;flex:1;overflow-x:auto}.sbar .tabs a{cursor:pointer;white-space:nowrap}.sbar button{margin-bottom:6px;flex:none}
+.tcount{display:inline-block;min-width:22px;padding:0 6px;margin-right:6px;border-radius:11px;background:var(--ln);font-size:.75rem;text-align:center}
 </style></head><body>
 <header><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><svg width="34" height="27" viewBox="0 0 38 30" style="flex:none"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b"/></svg>
 <div style="min-width:0"><b>حمام التلات</b><small>الموردين</small></div></div>
@@ -76,6 +85,7 @@ COLS.forEach(c=>fs.collection('sup_'+c).onSnapshot(s=>{s.docChanges().forEach(h=
 /* رفع البيانات المحلية الموجودة مرة واحدة عند أول ربط بـ Firestore */
 if(fs&&!localStorage.getItem('sup_migrated')){try{COLS.forEach(c=>Object.values(D[c]||{}).forEach(o=>o&&o.id&&fs.collection('sup_'+c).doc(o.id).set(o)));localStorage.setItem('sup_migrated','1')}catch(e){console.error(e)}}
 function put(c,o){D[c][o.id]=o;ls();fs&&fs.collection('sup_'+c).doc(o.id).set(o)}
+function del(c,id){delete D[c][id];ls();fs&&fs.collection('sup_'+c).doc(id).delete()}
 /* ===== أدوات ===== */
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8),ym=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),today=()=>{const d=new Date();return ym(d)+'-'+String(d.getDate()).padStart(2,'0')};
@@ -146,15 +156,27 @@ const K=[['إجمالي المستحقات للموردين',sum(S,s=>Math.max(b
 const top=S.map(s=>[s,bal(s.id)]).filter(x=>x[1]>0).sort((x,y)=>y[1]-x[1]).slice(0,5);
 const rec=[...a].sort((x,y)=>y.at-x.at).slice(0,8);
 return`${QA}<div class="grid">${K.map(k=>`<a class="c big" href="#${k[2]}"><span>${k[0]}</span><b class="${k[3]||''}">${F(k[1])}</b></a>`).join('')}</div>
-${chart()}<div class="box"><h3>أعلى الموردين من حيث الرصيد المستحق</h3>${top.length?`<table>${top.map(x=>`<tr><td><a href="#/s/${x[0].id}">${esc(x[0].name)}</a></td><td class="n cr">${F(x[1])}</td></tr>`).join('')}</table>`:'<p>لا توجد مستحقات.</p>'}</div>
+${chart()}<div class="box"><h3>أعلى الموردين من حيث الرصيد المستحق</h3>${top.length?`<table>${top.map(x=>`<tr><td><a class="lk" href="#/s/${x[0].id}">${esc(x[0].name)}</a></td><td class="n cr">${F(x[1])}</td></tr>`).join('')}</table>`:'<p>لا توجد مستحقات.</p>'}</div>
 <div class="box"><h3>آخر العمليات</h3>${rec.length?`<table>${rec.map(t=>`<tr><td>${T[t.type].n}<br><small>${esc(D.suppliers[t.sid]?.name)}</small></td><td class="n">${F(t.amount)}<br><small>${esc(t.method||'')}</small></td><td><small>${new Date(t.at).toLocaleString('ar-EG')}</small></td></tr>`).join('')}</table>`:'<p>لا توجد عمليات بعد. اضغط "＋ إضافة حركة".</p>'}</div>`}
 /* ===== الموردين ===== */
-function suppliers(q){const s=(q.get('s')||'').toLowerCase(),arch=q.get('a')=='1';
-const L=Object.values(D.suppliers).filter(x=>!!x.arch==arch&&(x.name+(x.phone||'')+(x.company||'')).toLowerCase().includes(s));
-return`<div class="row"><input id="ss" placeholder="بحث بالاسم أو الهاتف" value="${esc(s)}" oninput="location.hash='#/suppliers?s='+this.value+'&a=${arch?1:0}'" style="margin:0"><button onclick="supForm()">＋ مورد جديد</button><button class="s" onclick="location.hash='#/suppliers?a=${arch?0:1}'">${arch?'عرض النشطين':'المؤرشفين'}</button></div>
-<div class="box"><table><tr><th>المورد</th><th>الهاتف</th><th>الرصيد</th><th>آخر حركة</th><th class="np">إجراءات</th></tr>${L.map(x=>{const b=bal(x.id),t=balTxt(b),lt=[...act(x.id)].sort((p,q)=>q.at-p.at)[0];
-return`<tr><td><a href="#/s/${x.id}">${esc(x.name)}</a><br><small>${esc(x.company||'')}</small></td><td>${esc(x.phone||'')}</td><td class="n ${t[1]}">${F(Math.abs(b))}<br><small>${t[0]}</small></td><td><small>${lt?T[lt.type].n+' · '+lt.date:'—'}</small></td>
-<td class="np"><button class="x" style="color:var(--m)" onclick="supForm('${x.id}')">تعديل</button><button class="x" style="color:var(--m)" onclick="location.hash='#/s/${x.id}?tb=stm'">كشف حساب</button><button class="x" onclick="archive('${x.id}')">${x.arch?'استرجاع':'أرشفة'}</button></td></tr>`}).join('')||'<tr><td colspan=5>لا يوجد موردين.</td></tr>'}</table></div>`}
+const nrm=v=>String(v||'').toLowerCase().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').trim();
+function supRows(sv,arch){const k=nrm(sv);
+const L=Object.values(D.suppliers).filter(x=>!!x.arch==arch&&(!k||nrm(x.name+' '+(x.phone||'')+' '+(x.company||'')).includes(k))).sort((x,y)=>String(x.name).localeCompare(String(y.name),'ar'));
+return`<table><tr><th>المورد</th><th>الهاتف</th><th>الرصيد</th><th>آخر حركة</th><th class="np">إجراءات</th></tr>${L.map(x=>{const b=bal(x.id),t=balTxt(b),lt=[...act(x.id)].sort((p,q)=>q.at-p.at)[0];
+return`<tr><td><a class="lk" href="#/s/${x.id}"><span class="av">${esc((x.name||'؟').trim().charAt(0))}</span>${esc(x.name)}</a>${x.company?`<small class="sub">${esc(x.company)}</small>`:''}</td><td class="n">${esc(x.phone||'')}</td><td class="n ${t[1]}">${F(Math.abs(b))}<br><small>${t[0]}</small></td><td><small>${lt?T[lt.type].n+' · '+lt.date:'—'}</small></td>
+<td class="np" style="white-space:nowrap"><button class="x" style="color:var(--m)" onclick="supForm('${x.id}')">تعديل</button><button class="x" style="color:var(--m)" onclick="location.hash='#/s/${x.id}?tb=stm'">كشف حساب</button><button class="x" style="color:var(--m)" onclick="archive('${x.id}')">${x.arch?'استرجاع':'أرشفة'}</button><button class="x" onclick="delSup('${x.id}')">حذف</button></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;padding:28px;opacity:.6">${k?'لا توجد نتائج مطابقة للبحث.':arch?'لا يوجد موردين مؤرشفين.':'لا يوجد موردين بعد.'}</td></tr>`}</table>`}
+function suppliers(q){const sv=q.get('s')||'',arch=q.get('a')=='1';const cnt=a=>Object.values(D.suppliers).filter(x=>!!x.arch==a).length;
+return`<input id="ss" type="text" autocomplete="off" placeholder="🔍  ابحث بالاسم أو الشركة أو الهاتف…" value="${esc(sv)}" oninput="supFilter()">
+<div class="sbar np"><div class="tabs"><a class="${arch?'':'on'}" onclick="supTab(0)">الموردين<span class="tcount">${cnt(false)}</span></a><a class="${arch?'on':''}" onclick="supTab(1)">مؤرشف / خامل<span class="tcount">${cnt(true)}</span></a></div><button onclick="supForm()">＋ إضافة مورد</button></div>
+<div class="box" id="slist">${supRows(sv,arch)}</div>`}
+function supFilter(){const v=$('#ss').value,arch=H().q.get('a')=='1';$('#slist').innerHTML=supRows(v,arch);history.replaceState(null,'','#/suppliers?s='+encodeURIComponent(v)+'&a='+(arch?1:0))}
+function supTab(a){const v=$('#ss')?$('#ss').value:'';location.hash='#/suppliers?s='+encodeURIComponent(v)+'&a='+a}
+function delSup(id){const s=D.suppliers[id];if(!s)return;const tx=all().filter(t=>t.sid==id);
+if(tx.some(t=>isClosed(t.date)))return toast('للمورد حركات داخل فترة مقفلة. افتح الفترة أولًا أو استخدم الأرشفة',1);
+if(!tx.length){if(!confirm('حذف المورد "'+s.name+'" نهائيًا؟'))return}
+else{const w=prompt('تنبيه: المورد "'+s.name+'" لديه '+tx.length+' حركة ورصيد '+F(Math.abs(bal(id)))+'.\nالحذف نهائي: يمسح المورد وكل حركاته ولا يمكن التراجع عنه.\nلو عايز تخفيه فقط استخدم "أرشفة".\n\nللتأكيد اكتب كلمة: حذف');if(w===null)return;if(w.trim()!=='حذف')return toast('لم يتم الحذف: كلمة التأكيد غير مطابقة',1)}
+tx.forEach(t=>del('txs',t.id));del('suppliers',id);log('حذف مورد',{id,name:s.name+' ('+tx.length+' حركة)'},s);
+toast('تم حذف المورد');location.hash='#/suppliers';render()}
 function supForm(id){const s=D.suppliers[id]||{};$('#md').innerHTML=`<div><h3>${id?'تعديل مورد':'مورد جديد'}</h3>
 <label>اسم المورد *</label><input id="a_n" value="${esc(s.name)}"><label>اسم الشركة</label><input id="a_c" value="${esc(s.company)}">
 <label>الهاتف</label><input id="a_p" value="${esc(s.phone)}"><label>العنوان / ملاحظات</label><input id="a_o" value="${esc(s.note)}">
@@ -164,7 +186,7 @@ function supSave(id){const n=$('#a_n').value.trim();if(!n)return toast('اسم �
 const old=D.suppliers[id];const s={...(old||{id:uid(),at:Date.now()}),name:n,company:$('#a_c').value,phone:$('#a_p').value.trim(),note:$('#a_o').value};put('suppliers',s);log(id?'تعديل مورد':'إضافة مورد',s,old);
 if(!id){const b=P($('#a_b').value);if(b>0)saveTx({type:'opening',sid:s.id,amount:b,sgn:+$('#a_d').value,date:$('#a_t').value,note:'رصيد افتتاحي'},1)}
 closeM();toast('تم تسجيل العملية بنجاح');location.hash='#/s/'+s.id;render()}
-function archive(id){const s=D.suppliers[id];if(!confirm(s.arch?'استرجاع المورد؟':'أرشفة المورد؟ لن تُحذف حركاته.'))return;put('suppliers',{...s,arch:!s.arch});log('أرشفة/استرجاع مورد',s);location.hash='#/suppliers'}
+function archive(id){const s=D.suppliers[id];if(!confirm(s.arch?'استرجاع المورد؟':'أرشفة المورد؟ لن تُحذف حركاته.'))return;put('suppliers',{...s,arch:!s.arch});log('أرشفة/استرجاع مورد',s);location.hash='#/suppliers';render()}
 /* ===== ملف المورد وكشف الحساب ===== */
 function supplier(id,q){const s=D.suppliers[id];if(!s)return'<p>المورد غير موجود.</p>';
 const from=q.get('f')||'',to=q.get('e')||'',ft=q.get('t')||'';const A=act(id);const b=bal(id),bt=balTxt(b);
@@ -181,7 +203,7 @@ return`<div class="shead"><div class="row np" style="margin:0;align-items:flex-s
 <div><div class="nm">${esc(s.name)} ${s.arch?'<span class="tag">مؤرشف</span>':''}</div>
 <div class="meta">${s.company?'🏢 '+esc(s.company)+'<br>':''}${s.phone?'📞 '+esc(s.phone):''}${s.phone2?' · '+esc(s.phone2):''}${s.note?'<br>📍 '+esc(s.note):''}</div></div>
 <div style="text-align:left"><div style="font-size:12px;opacity:.85">${bt[0]}</div><div style="font-size:22px;font-weight:bold">${F(Math.abs(b))}</div></div></div>
-<div class="row np" style="margin-top:12px"><button onclick="openForm('invoice','${id}')">＋ فاتورة</button><button onclick="openForm('payment','${id}')">＋ دفعة</button><button onclick="openForm('return','${id}')">＋ مرتجع</button><button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="supForm('${id}')">تعديل</button><button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="archive('${id}')">${s.arch?'استرجاع':'أرشفة'}</button></div></div>
+<div class="row np" style="margin-top:12px"><button onclick="openForm('invoice','${id}')">＋ فاتورة</button><button onclick="openForm('payment','${id}')">＋ دفعة</button><button onclick="openForm('return','${id}')">＋ مرتجع</button><button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="supForm('${id}')">تعديل</button><button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="archive('${id}')">${s.arch?'استرجاع':'أرشفة'}</button><button class="s" style="background:transparent;color:#ffb4b4;border-color:#ffb4b4" onclick="delSup('${id}')">حذف</button></div></div>
 <div class="grid">${cards.slice(1).map(c=>`<div class="c"><span>${c[0]}</span><b class="${c[2]||''}">${c[1]}</b></div>`).join('')}</div>
 <div class="tabs"><a href="#/s/${id}?tb=inv" class="${tab=='inv'?'on':''}">الفواتير</a><a href="#/s/${id}?tb=stm" class="${tab=='stm'?'on':''}">كشف الحساب</a></div>
 ${tab=='stm'?`<div class="box"><div class="row np"><div><label>من</label><input type="date" value="${from}" onchange="qs('f',this.value)"></div><div><label>إلى</label><input type="date" value="${to}" onchange="qs('e',this.value)"></div>
@@ -191,7 +213,7 @@ ${from?`<tr><td colspan=6>رصيد أول الفترة</td><td class="n">${F(op)
 <tr style="font-weight:bold"><td colspan=4>الإجماليات</td><td class="n">${F(td)}</td><td class="n">${F(tc)}</td><td class="n">${F(run)}</td><td></td></tr></table>
 <p><b>الرصيد النهائي: ${F(Math.abs(run))} — ${balTxt(run)[0]}</b></p>
 <div class="po" style="border:0;border-top:1px solid #000;text-align:center;margin-top:10px;font-size:11px;padding-top:6px">كشف حساب: ${esc(s.name)} · تاريخ الاستخراج: ${today()} · تم إنشاء التقرير بواسطة نظام إدارة حسابات الموردين – حمام التلات</div>
-<div class="row np"><button onclick="print()">طباعة / PDF</button><button class="s" onclick="xls('statement')">تصدير Excel</button><button class="s" onclick="wa('${id}','${from}','${to}')">إرسال عبر واتساب</button><button class="s" onclick="wa('${id}','','',1)">إرسال آخر عملية</button></div></div>`:invoicesSection(id)}`}
+<div class="row np"><button onclick="printStmt('${id}','${from}','${to}','${ft}')">طباعة / PDF</button><button class="s" onclick="xls('statement')">تصدير Excel</button><button class="s" onclick="wa('${id}','${from}','${to}')">إرسال عبر واتساب</button><button class="s" onclick="wa('${id}','','',1)">إرسال آخر عملية</button></div></div>`:invoicesSection(id)}`}
 function qs(k,v){const{q}=H();v?q.set(k,v):q.delete(k);location.hash=location.hash.split('?')[0]+'?'+q.toString()}
 function wa(id,f,e,last){const s=D.suppliers[id],A=act(id).filter(t=>(!f||t.date>=f)&&(!e||t.date<=e)),g=(...t)=>F(sum(A.filter(x=>t.includes(x.type)),x=>x.amount));const b=bal(id);let m;
 if(last){const t=[...act(id)].sort((x,y)=>y.at-x.at)[0];if(!t)return toast('لا توجد حركات',1);m=`حمام التلات 👑\n\nآخر عملية على حساب: ${s.name}\n${T[t.type].n} (${t.no})\nالقيمة: ${F(t.amount)}\nالتاريخ: ${t.date}\nالرصيد الحالي: ${F(Math.abs(b))} (${balTxt(b)[0]})`}
@@ -234,7 +256,8 @@ function voidTx(id){const t=D.txs[id];if(isClosed(t.date))return toast('هذه �
 const n={...t,status:'void',reason:r.trim(),voidAt:Date.now()};put('txs',n);log('إلغاء حركة',n,t);toast('تم إلغاء الحركة وتحديث الرصيد');render()}
 /* ===== الإعدادات ===== */
 function settings(){const A=Object.values(D.audit).sort((x,y)=>y.at-x.at).slice(0,30);
-return`<div class="box"><h3>طرق الدفع</h3>${methods().map((m,i)=>`<span class="tag">${esc(m)} <button class="x" onclick="mDel(${i})">×</button></span> `).join('')}<div class="row" style="margin-top:8px"><input id="nm" placeholder="طريقة جديدة (مثال: Vodafone Cash)"><button onclick="mAdd()">إضافة</button></div></div>
+return`<div class="box"><h3>بيانات الشركة (تظهر في الطباعة و PDF)</h3><label>اسم الشركة</label><input id="co_n" value="${esc(CO().name)}"><label>العنوان</label><input id="co_a" value="${esc(CO().addr)}"><div class="row"><div><label>الهاتف</label><input id="co_p" value="${esc(CO().phone)}"></div><div><label>سجل تجاري / رقم ضريبي (اختياري)</label><input id="co_t" value="${esc(CO().tax)}"></div></div><button onclick="coSave()">حفظ بيانات الشركة</button></div>
+<div class="box"><h3>طرق الدفع</h3>${methods().map((m,i)=>`<span class="tag">${esc(m)} <button class="x" onclick="mDel(${i})">×</button></span> `).join('')}<div class="row" style="margin-top:8px"><input id="nm" placeholder="طريقة جديدة (مثال: Vodafone Cash)"><button onclick="mAdd()">إضافة</button></div></div>
 <div class="box"><h3>إقفال الفترات</h3>${closed().map(m=>`<span class="tag">${m} <button class="x" onclick="clo('${m}',1)">فتح</button></span> `).join('')||'<small>لا توجد فترات مقفلة.</small>'}<div class="row" style="margin-top:8px"><input id="cm" type="month"><button onclick="clo($('#cm').value)">إقفال الشهر</button></div><small>بعد الإقفال لا يمكن إضافة أو تعديل أو إلغاء حركة بتاريخ داخل الشهر إلا بعد فتحه، وكل فتح وإقفال يُسجل.</small></div>
 <div class="box"><h3>النسخ الاحتياطي</h3><button class="s" onclick="bk()">تنزيل نسخة JSON</button><p><small>الحفظ: ${fs?'Firebase Firestore متصل':'محلي على هذا المتصفح فقط — الصق إعدادات Firebase داخل الملف للمزامنة'}</small></p></div>
 <div class="box"><h3>سجل العمليات (آخر 30)</h3><table>${A.map(a=>`<tr><td><small>${new Date(a.at).toLocaleString('ar-EG')}</small></td><td>${a.op}</td><td>${esc(a.ref)}</td><td>${a.by}</td></tr>`).join('')||'<tr><td>لا يوجد.</td></tr>'}</table></div>`}
@@ -278,7 +301,55 @@ return`<div class="row np">${R.map(x=>`<button class="${r==x[0]?'':'s'}" onclick
 <div><label>طريقة الدفع</label><select onchange="qs('m',this.value)"><option value="">الكل</option>${opt(methods().map(m=>[m,m]),mt)}</select></div></div>
 <div class="box"><div class="po"><h3>${ti}</h3>الفترة: ${f||'—'} إلى ${e||'—'} · تاريخ الاستخراج: ${today()} · المستخدم: المدير</div><h3 class="np">${ti}</h3>${b}
 <div class="po" style="border:0;border-top:1px solid #000;margin-top:10px;font-size:11px">تم إنشاء التقرير بواسطة نظام إدارة حسابات الموردين – حمام التلات</div></div>
-<div class="row np"><button onclick="print()">طباعة / PDF</button><button class="s" onclick="xls('${r}')">تصدير Excel</button></div>`}
+<div class="row np"><button onclick="printRep('${ti}','${f}','${e}','${sid}')">طباعة / PDF</button><button class="s" onclick="xls('${r}')">تصدير Excel</button></div>`}
+/* ===== الطباعة / PDF الاحترافي ===== */
+const CO=()=>({name:'حمام التلات',addr:'112 شارع مصطفى النحاس – أول كوبري المنهل',phone:'01035145828',tax:'',...(D.meta.company||{})});
+function coSave(){put('meta',{id:'company',name:$('#co_n').value.trim(),addr:$('#co_a').value.trim(),phone:$('#co_p').value.trim(),tax:$('#co_t').value.trim()});toast('تم حفظ بيانات الشركة')}
+const PCSS=`@page{size:A4;margin:12mm 11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Cairo,Tahoma,"Segoe UI",Arial,sans-serif;color:#12151c;margin:0;font-size:12px;line-height:1.55}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:10px}.co{display:flex;align-items:center;gap:12px}
+.lg{width:56px;height:56px;border-radius:12px;background:#1b3654;display:flex;align-items:center;justify-content:center;flex:none}
+.cn{font-size:22px;font-weight:800;color:#1b3654;line-height:1.25}.ci{font-size:11px;color:#555}
+.dt{text-align:left}.dtt{font-size:18px;font-weight:800;color:#fff;background:#1b3654;padding:6px 20px;border-radius:8px;display:inline-block;border-bottom:3px solid #c9a24b}
+.bar{height:4px;background:linear-gradient(90deg,#1b3654,#c9a24b);border-radius:2px;margin:2px 0 12px}
+.two{display:flex;gap:10px;margin-bottom:10px}.bx{flex:1;border:1px solid #cfd6de;border-radius:8px;overflow:hidden}
+.bx h4{margin:0;background:#eef1f4;color:#1b3654;padding:5px 10px;font-size:12px;border-bottom:1px solid #cfd6de}.bx .in{padding:6px 10px}
+.kv{width:100%;border-collapse:collapse}.kv td{padding:2px 0;font-size:12px;border:0}.kv td:first-child{color:#666;width:30%}
+.sum{display:flex;gap:8px;margin-bottom:12px}.sc{flex:1;border:1px solid #cfd6de;border-radius:8px;padding:6px 8px;text-align:center}
+.sc span{display:block;font-size:10.5px;color:#666}.sc b{font-size:13.5px;display:block}.sc small{font-size:10px}
+.sc.hl{background:#1b3654;border-color:#1b3654}.sc.hl span,.sc.hl b{color:#fff}.sc.hl small{color:#c9a24b}
+table.tb{width:100%;border-collapse:collapse;font-size:11.5px}.tb th{background:#1b3654;color:#fff;padding:7px 6px;text-align:right;border:1px solid #1b3654}
+.tb td{padding:6px;border:1px solid #d5dbe2;vertical-align:top}.tb tr:nth-child(even) td{background:#f6f8fa}thead{display:table-header-group}tr{page-break-inside:avoid}
+.n{direction:ltr;text-align:left;white-space:nowrap}.dr{color:#15803d}.cr{color:#b91c1c}
+.tb tfoot td{background:#e6ebf1!important;font-weight:800;border-top:2px solid #1b3654}
+.fin{margin-top:12px;border:2px solid #1b3654;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:#1b3654;page-break-inside:avoid}
+.sg{display:flex;justify-content:space-around;margin-top:46px;page-break-inside:avoid}.sg div{width:30%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
+.ft{margin-top:18px;border-top:1px solid #cfd6de;padding-top:6px;font-size:10px;color:#777;text-align:center}`;
+const LOGO='<svg width="36" height="29" viewBox="0 0 38 30"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b"/></svg>';
+function printDoc(o){const c=CO();const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(o.file)}</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>${PCSS}</style></head><body>
+<div class="hd"><div class="co"><div class="lg">${LOGO}</div><div><div class="cn">${esc(c.name)}</div><div class="ci">${esc(c.addr)}</div><div class="ci">هاتف: <span dir="ltr">${esc(c.phone)}</span>${c.tax?' · '+esc(c.tax):''}</div></div></div>
+<div class="dt"><div class="dtt">${o.title}</div><div class="ci" style="margin-top:6px">تاريخ الاستخراج: ${today()}</div></div></div><div class="bar"></div>${o.body}
+<div class="ft">صدر هذا المستند من نظام إدارة حسابات الموردين – ${esc(c.name)} · ${new Date().toLocaleString('ar-EG')}</div></body></html>`;
+const f=document.createElement('iframe');f.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0';document.body.appendChild(f);
+const w=f.contentWindow,d=w.document;d.open();d.write(html);d.close();
+Promise.race([d.fonts?d.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1800))]).then(()=>setTimeout(()=>{const old=document.title;document.title=o.file;try{w.focus();w.print()}catch(e){toast('تعذر فتح نافذة الطباعة',1)}document.title=old;setTimeout(()=>f.remove(),60000)},200))}
+function printStmt(id,from,to,ft){const s=D.suppliers[id];if(!s)return;const A=act(id);
+const op=from?sum(A.filter(t=>t.date<from),t=>t.cr-t.dr):0;let run=op,td=0,tc=0;
+const rows=A.filter(t=>(!from||t.date>=from)&&(!to||t.date<=to)&&(!ft||t.type==ft)).sort((x,y)=>(x.type=='opening')!=(y.type=='opening')?(x.type=='opening'?-1:1):x.date==y.date?x.at-y.at:x.date<y.date?-1:1);
+const lb=v=>v>0?'علينا':v<0?'لنا':'',B=v=>F(Math.abs(v))+(lb(v)?' <small>'+lb(v)+'</small>':'');
+const tot=(...t)=>sum(rows.filter(x=>t.includes(x.type)),x=>x.amount);
+const body=rows.map((t,i)=>{run+=t.cr-t.dr;td+=t.dr;tc+=t.cr;return`<tr><td>${i+1}</td><td class="n">${t.date}</td><td><b>${T[t.type].n}</b>${t.note?'<br>'+esc(t.note):''}<br><small style="color:#777">${t.no}${t.alloc&&t.alloc.length?' · مخصصة: '+t.alloc.map(x=>D.txs[x.i]?.no).join('، '):''}</small></td><td>${esc(D.txs[t.inv]?.no||'')}</td><td class="n dr">${t.dr?F(t.dr):''}</td><td class="n cr">${t.cr?F(t.cr):''}</td><td class="n"><b>${B(run)}</b></td></tr>`}).join('');
+const html=`<div class="two"><div class="bx"><h4>بيانات المورد</h4><div class="in"><table class="kv"><tr><td>اسم المورد</td><td><b>${esc(s.name)}</b></td></tr>${s.company?`<tr><td>الشركة</td><td>${esc(s.company)}</td></tr>`:''}${s.phone?`<tr><td>الهاتف</td><td dir="ltr" style="text-align:right">${esc(s.phone)}${s.phone2?' · '+esc(s.phone2):''}</td></tr>`:''}${s.note?`<tr><td>العنوان</td><td>${esc(s.note)}</td></tr>`:''}</table></div></div>
+<div class="bx"><h4>بيانات الكشف</h4><div class="in"><table class="kv"><tr><td>الفترة</td><td>${from||'بداية التعامل'} إلى ${to||today()}</td></tr><tr><td>عدد الحركات</td><td>${rows.length}</td></tr><tr><td>العملة</td><td>جنيه مصري</td></tr>${ft?`<tr><td>النوع</td><td>${T[ft].n} (كشف مفلتر)</td></tr>`:''}</table></div></div></div>
+<div class="sum">${from?`<div class="sc"><span>رصيد أول الفترة</span><b>${B(op)}</b></div>`:''}<div class="sc"><span>إجمالي المشتريات</span><b>${F(tot('invoice'))}</b></div><div class="sc"><span>المرتجعات</span><b>${F(tot('return'))}</b></div><div class="sc"><span>المدفوعات</span><b>${F(tot('payment','advance'))}</b></div><div class="sc hl"><span>الرصيد النهائي</span><b>${B(run)}</b></div></div>
+<table class="tb"><thead><tr><th style="width:4%">م</th><th style="width:11%">التاريخ</th><th>البيان</th><th style="width:11%">الفاتورة</th><th style="width:13%">مدين</th><th style="width:13%">دائن</th><th style="width:15%">الرصيد</th></tr></thead><tbody>${from?`<tr><td colspan="6"><b>رصيد أول الفترة</b></td><td class="n"><b>${B(op)}</b></td></tr>`:''}${body||'<tr><td colspan="7" style="text-align:center;padding:16px">لا توجد حركات في هذه الفترة.</td></tr>'}</tbody>
+<tfoot><tr><td colspan="4">الإجماليات</td><td class="n">${F(td)}</td><td class="n">${F(tc)}</td><td class="n">${B(run)}</td></tr></tfoot></table>
+<div class="fin"><span>الرصيد النهائي المستحق</span><span>${F(Math.abs(run))} — ${balTxt(run)[0]}</span></div>
+<div class="sg"><div>أمين الحسابات</div><div>المدير</div><div>اعتماد المورد</div></div>`;
+printDoc({file:'كشف حساب - '+s.name+' - '+today(),title:'كشف حساب مورد',body:html})}
+function printRep(ti,f,e,sid){const t=$('#rt');if(!t)return;const c=t.cloneNode(true);c.querySelectorAll('.np,button').forEach(x=>x.remove());c.className='tb';c.removeAttribute('id');const sp=sid&&D.suppliers[sid];
+const body=`<div class="two"><div class="bx"><h4>بيانات التقرير</h4><div class="in"><table class="kv"><tr><td>التقرير</td><td><b>${esc(ti)}</b></td></tr><tr><td>الفترة</td><td>${f||'—'} إلى ${e||'—'}</td></tr>${sp?`<tr><td>المورد</td><td>${esc(sp.name)}</td></tr>`:''}<tr><td>المستخدم</td><td>المدير</td></tr></table></div></div></div>${c.outerHTML}<div class="sg"><div>أمين الحسابات</div><div>المدير</div></div>`;
+printDoc({file:ti+' - '+today(),title:ti,body})}
 /* ===== الزر العائم ===== */
 function closeM(){$('#md').style.display='none'}
 const fb=$('#fab'),mn=$('#menu');mn.innerHTML=MENU.map(k=>`<a data-k="${k}">${MENU_N[k]}</a>`).join('');
