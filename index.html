@@ -5,16 +5,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{--m:#1b3654;--m2:#0b1420;--k:#12151c;--g:#15803d;--r:#b91c1c;--au:#c9a24b;--bg:#eef1f4;--ln:#dfe3e8;--sf:#fff;--tx:#12151c}
 body.dark{--bg:#0c1016;--sf:#161c26;--tx:#e7ebf0;--ln:#26303d}
-*{box-sizing:border-box}html{font-size:17px}
-a{color:var(--m);text-decoration:none;font-weight:600;transition:color .15s}
-a:hover{color:var(--au)}
-body.dark a{color:#9db8d6}
-body.dark a:hover{color:var(--au)}body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:100px;transition:background .2s,color .2s;font-size:1rem}
+*{box-sizing:border-box}html{font-size:17px}body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:100px;transition:background .2s,color .2s;font-size:1rem}
 @media (min-width:820px){html{font-size:16px}main{max-width:1100px}}
 header{background:linear-gradient(135deg,var(--m),var(--m2));color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:25}
 header b{font-size:18px}header small{display:block;opacity:.75;font-size:11px}
@@ -43,12 +37,6 @@ label{font-size:.82rem;color:#555;font-weight:600}body.dark label{color:#9aa5b1}
 .tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:2px solid var(--ln)}.tabs a{padding:10px 16px;text-decoration:none;color:var(--tx);opacity:.6;font-size:14px;border-bottom:3px solid transparent;margin-bottom:-2px}.tabs a.on{opacity:1;color:var(--m);border-color:var(--m);font-weight:bold}body.dark .tabs a.on{color:#9db8d6;border-color:#9db8d6}
 .shead{background:linear-gradient(135deg,var(--m),var(--m2));color:#fff;border-radius:10px;padding:16px;margin-bottom:14px}
 .shead .nm{font-size:20px;font-weight:bold}.shead .meta{font-size:12.5px;opacity:.85;margin-top:4px;line-height:1.7}
-.s-search{position:relative;margin-bottom:14px}
-.s-search input{border:0;border-bottom:2px solid var(--ln);border-radius:0;background:transparent;padding:12px 40px 12px 4px;font-size:1.05rem;margin:0;min-height:0}
-.s-search input:focus{outline:none;border-color:var(--m)}
-body.dark .s-search input:focus{border-color:#9db8d6}
-.s-search svg{position:absolute;right:6px;top:50%;transform:translateY(-50%);opacity:.55;pointer-events:none}
-.s-toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
 .po{display:none}.gph{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--ln);cursor:pointer}
 #gsr{position:absolute;top:100%;right:0;left:0;background:var(--sf);color:var(--tx);border-radius:8px;box-shadow:0 6px 18px #0006;z-index:40;display:none;max-height:60vh;overflow:auto}
 #gsr a{display:block;padding:9px 12px;border-bottom:1px solid var(--ln);color:inherit;text-decoration:none;font-size:13px}
@@ -60,7 +48,7 @@ body,body.dark{background:#fff!important;color:#000!important}
 th{background:#ddd!important;color:#000!important}}
 </style></head><body>
 <header><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><svg width="34" height="27" viewBox="0 0 38 30" style="flex:none"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b"/></svg>
-<div style="min-width:0"><b>حمام التلات 👑</b><small>الموردين</small></div></div>
+<div style="min-width:0"><b>حمام التلات</b><small>الموردين</small></div></div>
 <div style="position:relative;flex:1;max-width:220px"><input id="gs" placeholder="بحث سريع…" autocomplete="off" oninput="gsearch(this.value)" style="margin:0;padding:7px 10px;font-size:13px;border:0"><div id="gsr"></div></div>
 <button id="thm" class="s" style="padding:7px 10px;flex:none" onclick="toggleTheme()">🌙</button></header>
 <nav id="nv"></nav><main id="v"></main>
@@ -68,18 +56,16 @@ th{background:#ddd!important;color:#000!important}}
 <b style="font-size:20px">حمام التلات</b><br>112 شارع مصطفى النحاس – أول كوبري المنهل · 01035145828</div>
 <div id="menu"></div><button id="fab">＋ إضافة حركة</button><div id="md"></div><div id="toast"></div>
 <script>
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyA-dBrLrexafwlw8LOguQaIf2plxBG67e4",
-  authDomain: "moared-52ae1.firebaseapp.com",
-  databaseURL: "https://moared-52ae1-default-rtdb.firebaseio.com",
-  projectId: "moared-52ae1",
-  storageBucket: "moared-52ae1.firebasestorage.app",
-  messagingSenderId: "628900716110",
-  appId: "1:628900716110:web:d395e932d9d5048a172d1f",
-  measurementId: "G-YWXWJ3LPMD"
+/* ===== إعداد Firebase: الصق إعدادات مشروعك هنا. لو فاضي، النظام يشتغل محليًا على المتصفح فقط ===== */
+const FB={
+  apiKey:"AIzaSyA-dBrLrexafwlw8LOguQaIf2plxBG67e4",
+  authDomain:"moared-52ae1.firebaseapp.com",
+  databaseURL:"https://moared-52ae1-default-rtdb.firebaseio.com",
+  projectId:"moared-52ae1",
+  storageBucket:"moared-52ae1.firebasestorage.app",
+  messagingSenderId:"628900716110",
+  appId:"1:628900716110:web:d395e932d9d5048a172d1f"
 };
-const FB={apiKey:"",authDomain:"",projectId:"",appId:""};
 const COLS=['suppliers','txs','audit','meta'];let D={suppliers:{},txs:{},audit:{},meta:{}},fs=null;
 const ls=()=>localStorage.setItem('sup_v1',JSON.stringify(D));
 if(localStorage.getItem('sup_theme')=='dark')document.body.classList.add('dark');
@@ -87,6 +73,8 @@ function toggleTheme(){document.body.classList.toggle('dark');localStorage.setIt
 try{D=Object.assign(D,JSON.parse(localStorage.getItem('sup_v1')))}catch(e){}
 if(FB.apiKey&&window.firebase){firebase.initializeApp(FB);fs=firebase.firestore();
 COLS.forEach(c=>fs.collection('sup_'+c).onSnapshot(s=>{s.docChanges().forEach(h=>{h.type=='removed'?delete D[c][h.doc.id]:D[c][h.doc.id]=h.doc.data()});ls();render()}))}
+/* رفع البيانات المحلية الموجودة مرة واحدة عند أول ربط بـ Firestore */
+if(fs&&!localStorage.getItem('sup_migrated')){try{COLS.forEach(c=>Object.values(D[c]||{}).forEach(o=>o&&o.id&&fs.collection('sup_'+c).doc(o.id).set(o)));localStorage.setItem('sup_migrated','1')}catch(e){console.error(e)}}
 function put(c,o){D[c][o.id]=o;ls();fs&&fs.collection('sup_'+c).doc(o.id).set(o)}
 /* ===== أدوات ===== */
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -163,8 +151,7 @@ ${chart()}<div class="box"><h3>أعلى الموردين من حيث الرصي�
 /* ===== الموردين ===== */
 function suppliers(q){const s=(q.get('s')||'').toLowerCase(),arch=q.get('a')=='1';
 const L=Object.values(D.suppliers).filter(x=>!!x.arch==arch&&(x.name+(x.phone||'')+(x.company||'')).toLowerCase().includes(s));
-return`<div class="s-search"><input id="ss" placeholder="ابحث عن مورد بالاسم أو رقم الهاتف…" value="${esc(s)}" oninput="location.hash='#/suppliers?s='+this.value+'&a=${arch?1:0}'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
-<div class="s-toolbar"><button class="s" onclick="location.hash='#/suppliers?a=${arch?0:1}'">${arch?'عرض النشطين':'المؤرشفين'}</button><button onclick="supForm()">＋ مورد جديد</button></div>
+return`<div class="row"><input id="ss" placeholder="بحث بالاسم أو الهاتف" value="${esc(s)}" oninput="location.hash='#/suppliers?s='+this.value+'&a=${arch?1:0}'" style="margin:0"><button onclick="supForm()">＋ مورد جديد</button><button class="s" onclick="location.hash='#/suppliers?a=${arch?0:1}'">${arch?'عرض النشطين':'المؤرشفين'}</button></div>
 <div class="box"><table><tr><th>المورد</th><th>الهاتف</th><th>الرصيد</th><th>آخر حركة</th><th class="np">إجراءات</th></tr>${L.map(x=>{const b=bal(x.id),t=balTxt(b),lt=[...act(x.id)].sort((p,q)=>q.at-p.at)[0];
 return`<tr><td><a href="#/s/${x.id}">${esc(x.name)}</a><br><small>${esc(x.company||'')}</small></td><td>${esc(x.phone||'')}</td><td class="n ${t[1]}">${F(Math.abs(b))}<br><small>${t[0]}</small></td><td><small>${lt?T[lt.type].n+' · '+lt.date:'—'}</small></td>
 <td class="np"><button class="x" style="color:var(--m)" onclick="supForm('${x.id}')">تعديل</button><button class="x" style="color:var(--m)" onclick="location.hash='#/s/${x.id}?tb=stm'">كشف حساب</button><button class="x" onclick="archive('${x.id}')">${x.arch?'استرجاع':'أرشفة'}</button></td></tr>`}).join('')||'<tr><td colspan=5>لا يوجد موردين.</td></tr>'}</table></div>`}
@@ -204,7 +191,7 @@ ${from?`<tr><td colspan=6>رصيد أول الفترة</td><td class="n">${F(op)
 <tr style="font-weight:bold"><td colspan=4>الإجماليات</td><td class="n">${F(td)}</td><td class="n">${F(tc)}</td><td class="n">${F(run)}</td><td></td></tr></table>
 <p><b>الرصيد النهائي: ${F(Math.abs(run))} — ${balTxt(run)[0]}</b></p>
 <div class="po" style="border:0;border-top:1px solid #000;text-align:center;margin-top:10px;font-size:11px;padding-top:6px">كشف حساب: ${esc(s.name)} · تاريخ الاستخراج: ${today()} · تم إنشاء التقرير بواسطة نظام إدارة حسابات الموردين – حمام التلات</div>
-<div class="row np"><button onclick="print()">طباعة</button><button class="s" onclick="pdfExport('كشف حساب: ${esc(s.name)}','الفترة: ${from||'البداية'} إلى ${to||today()}','كشف-حساب-${esc(s.name).replace(/\s+/g,'-')}-${today()}')">تصدير PDF</button><button class="s" onclick="xls('statement')">تصدير Excel</button><button class="s" onclick="wa('${id}','${from}','${to}')">إرسال عبر واتساب</button><button class="s" onclick="wa('${id}','','',1)">إرسال آخر عملية</button></div></div>`:invoicesSection(id)}`}
+<div class="row np"><button onclick="print()">طباعة / PDF</button><button class="s" onclick="xls('statement')">تصدير Excel</button><button class="s" onclick="wa('${id}','${from}','${to}')">إرسال عبر واتساب</button><button class="s" onclick="wa('${id}','','',1)">إرسال آخر عملية</button></div></div>`:invoicesSection(id)}`}
 function qs(k,v){const{q}=H();v?q.set(k,v):q.delete(k);location.hash=location.hash.split('?')[0]+'?'+q.toString()}
 function wa(id,f,e,last){const s=D.suppliers[id],A=act(id).filter(t=>(!f||t.date>=f)&&(!e||t.date<=e)),g=(...t)=>F(sum(A.filter(x=>t.includes(x.type)),x=>x.amount));const b=bal(id);let m;
 if(last){const t=[...act(id)].sort((x,y)=>y.at-x.at)[0];if(!t)return toast('لا توجد حركات',1);m=`حمام التلات 👑\n\nآخر عملية على حساب: ${s.name}\n${T[t.type].n} (${t.no})\nالقيمة: ${F(t.amount)}\nالتاريخ: ${t.date}\nالرصيد الحالي: ${F(Math.abs(b))} (${balTxt(b)[0]})`}
@@ -266,47 +253,6 @@ $('#sv').disabled=true;const n={...t,date:d,amount:a,note:$('#e_n').value,cr:t.c
 function chart(){const a=act(),ms=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);ms.push(ym(d))}
 const f=(m,...t)=>sum(a.filter(x=>t.includes(x.type)&&x.date.startsWith(m)),x=>x.amount),pu=ms.map(m=>f(m,'invoice')),pa=ms.map(m=>f(m,'payment','advance')),mx=Math.max(...pu,...pa,1);
 return`<div class="box"><h3>المشتريات والمدفوعات — آخر 6 أشهر</h3><div style="display:flex;gap:6px">${ms.map((m,i)=>`<div style="flex:1;text-align:center;font-size:10px"><div style="display:flex;gap:2px;align-items:flex-end;height:100px;justify-content:center"><i style="width:40%;background:var(--m);height:${pu[i]/mx*100}%"></i><i style="width:40%;background:var(--g);height:${pa[i]/mx*100}%"></i></div>${m.slice(5)}</div>`).join('')}</div><small><span style="color:var(--m)">■</span> مشتريات <span style="color:var(--g)">■</span> مدفوعات</small></div>`}
-/* ===== تصدير PDF احترافي حقيقي: Header/Footer ثابتان ومتكرران، ترقيم صفحات، Landscape تلقائي، من نفس بيانات الجدول المعروض ===== */
-async function pdfExport(title,sub,fname){
-if(!window.html2canvas||!window.jspdf){toast('تعذّر تحميل مكتبة PDF — تأكد من الاتصال بالإنترنت',1);return}
-const table=$('#rt');if(!table)return toast('لا يوجد جدول لتصديره',1);
-const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>td.textContent.trim()));
-if(rows.length<2)return toast('لا توجد بيانات لتصديرها',1);
-const head=rows[0],totals=rows[rows.length-1],body=rows.slice(1,-1);
-const land=head.length>=6,pw=land?297:210,ph=land?210:297,MM=3.7795275591,margin=10;
-const pxW=Math.round(pw*MM),pxH=Math.round(ph*MM),cw=pxW-2*margin*MM,availH=pxH-2*margin*MM;
-const sumCards=totals.map((v,i)=>[head[i],v]).filter(x=>x[0]&&/[0-9]/.test(x[1]));
-toast('جارٍ تجهيز PDF...');
-const host=document.createElement('div');host.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;color:#111';document.body.appendChild(host);
-const th=h=>`<th style="background:#1b3654;color:#fff;padding:7px 9px;text-align:right;font-size:11px;white-space:nowrap">${esc(h)}</th>`;
-function shell(bodyHtml,isFirst,no,tot){return`<div style="width:${cw}px;padding:${margin*MM}px;font-family:Cairo,Tahoma,Arial;box-sizing:border-box;color:#111">
-<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #c9a24b;padding-bottom:8px;margin-bottom:10px">
-<div style="display:flex;gap:8px;align-items:center"><span style="font-size:24px">👑</span><div><div style="font-weight:800;font-size:15px;color:#1b3654">حمام التلات</div><div style="font-size:10px;color:#555">نظام إدارة المشتريات والمخزون</div></div></div>
-<div style="text-align:left;font-size:10px;color:#555">112 شارع مصطفى النحاس – أول كوبري المنهل<br>01035145828</div></div>
-${isFirst?`<div style="font-size:18px;font-weight:800;color:#1b3654;margin-bottom:3px">${esc(title)}</div>${sub?`<div style="font-size:11px;color:#555;margin-bottom:10px">${esc(sub)}</div>`:''}
-${sumCards.length?`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">${sumCards.map(c=>`<div style="flex:1;min-width:110px;border:1px solid #e2dede;border-radius:8px;padding:8px 10px"><div style="font-size:10px;color:#666">${esc(c[0])}</div><div style="font-size:14px;font-weight:800;color:#1b3654">${esc(c[1])}</div></div>`).join('')}</div>`:''}`:''}
-${bodyHtml}
-<div style="border-top:2px solid #c9a24b;margin-top:14px;padding-top:6px;display:flex;justify-content:space-between;font-size:9px;color:#666">
-<span>حمام التلات — نظام إدارة المشتريات والمخزون</span><span>تاريخ الإصدار: ${today()}</span><span>صفحة ${no} من ${tot}</span></div></div>`}
-host.innerHTML=shell(`<table style="width:100%;border-collapse:collapse"><thead><tr>${head.map(th).join('')}</tr></thead><tbody><tr>${head.map(()=>`<td style="padding:7px 9px;font-size:11px">x</td>`).join('')}</tr></tbody></table>`,true,1,1);
-const rowH=host.querySelector('tbody tr').getBoundingClientRect().height||22;
-const chromeH=host.firstElementChild.getBoundingClientRect().height-rowH;
-const perPage=Math.max(6,Math.floor((availH-chromeH)/rowH)-1);
-const chunks=[];for(let i=0;i<body.length;i+=perPage)chunks.push(body.slice(i,i+perPage));
-if(!chunks.length)chunks.push([]);
-const totalPages=chunks.length;
-const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:land?'landscape':'portrait'});
-for(let i=0;i<totalPages;i++){
-const trs=chunks[i].map(r=>`<tr>${r.map((c,ci)=>`<td style="padding:7px 9px;font-size:11px;border-bottom:1px solid #eee;text-align:${ci>=r.length-2?'left':'right'}">${esc(c)}</td>`).join('')}</tr>`).join('');
-const totRow=i==totalPages-1?`<tr style="font-weight:800;background:#f4efe3">${totals.map(c=>`<td style="padding:7px 9px;font-size:11px">${esc(c)}</td>`).join('')}</tr>`:'';
-const tableHtml=`<table style="width:100%;border-collapse:collapse"><thead><tr>${head.map(th).join('')}</tr></thead><tbody>${trs||`<tr><td colspan="${head.length}" style="padding:14px;text-align:center;font-size:11px;color:#888">لا توجد بيانات</td></tr>`}${totRow}</tbody></table>`;
-host.innerHTML=shell(tableHtml,i==0,i+1,totalPages);
-const canvas=await html2canvas(host.firstElementChild,{scale:2,backgroundColor:'#fff'});
-if(i>0)doc.addPage();
-doc.addImage(canvas.toDataURL('image/jpeg',.92),'JPEG',0,0,pw,ph);
-}
-document.body.removeChild(host);
-doc.save(fname+'.pdf');toast('تم تصدير PDF بنجاح')}
 function xls(n){const c=$('#rt').cloneNode(true);c.querySelectorAll('.np,button').forEach(x=>x.remove());
 const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff<html dir="rtl"><meta charset="utf-8"><body>'+c.outerHTML+'</body></html>'],{type:'application/vnd.ms-excel'}));a.download=n+'-'+today()+'.xls';a.click()}
 function reports(q,compact){const g=k=>q.get(k)||'',r=g('r')||'tx',f=g('f'),e=g('e'),sid=g('s'),tyL=g('t').split(',').filter(Boolean),mt=g('m');
@@ -332,7 +278,7 @@ return`<div class="row np">${R.map(x=>`<button class="${r==x[0]?'':'s'}" onclick
 <div><label>طريقة الدفع</label><select onchange="qs('m',this.value)"><option value="">الكل</option>${opt(methods().map(m=>[m,m]),mt)}</select></div></div>
 <div class="box"><div class="po"><h3>${ti}</h3>الفترة: ${f||'—'} إلى ${e||'—'} · تاريخ الاستخراج: ${today()} · المستخدم: المدير</div><h3 class="np">${ti}</h3>${b}
 <div class="po" style="border:0;border-top:1px solid #000;margin-top:10px;font-size:11px">تم إنشاء التقرير بواسطة نظام إدارة حسابات الموردين – حمام التلات</div></div>
-<div class="row np"><button onclick="print()">طباعة</button><button class="s" onclick="pdfExport('${esc(ti)}','${f?('الفترة: '+f+' إلى '+(e||today())):'بتاريخ '+today()}','تقرير-${r}-${today()}')">تصدير PDF</button><button class="s" onclick="xls('${r}')">تصدير Excel</button></div>`}
+<div class="row np"><button onclick="print()">طباعة / PDF</button><button class="s" onclick="xls('${r}')">تصدير Excel</button></div>`}
 /* ===== الزر العائم ===== */
 function closeM(){$('#md').style.display='none'}
 const fb=$('#fab'),mn=$('#menu');mn.innerHTML=MENU.map(k=>`<a data-k="${k}">${MENU_N[k]}</a>`).join('');
