@@ -8,7 +8,11 @@
 <style>
 :root{--m:#1b3654;--m2:#0b1420;--k:#12151c;--g:#15803d;--r:#b91c1c;--au:#c9a24b;--bg:#eef1f4;--ln:#dfe3e8;--sf:#fff;--tx:#12151c}
 body.dark{--bg:#0c1016;--sf:#161c26;--tx:#e7ebf0;--ln:#26303d}
-*{box-sizing:border-box}html{font-size:17px}body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:100px;transition:background .2s,color .2s;font-size:1rem}
+*{box-sizing:border-box}html{font-size:17px}
+a{color:var(--m);text-decoration:none;font-weight:600;transition:color .15s}
+a:hover{color:var(--au)}
+body.dark a{color:#9db8d6}
+body.dark a:hover{color:var(--au)}body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:100px;transition:background .2s,color .2s;font-size:1rem}
 @media (min-width:820px){html{font-size:16px}main{max-width:1100px}}
 header{background:linear-gradient(135deg,var(--m),var(--m2));color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:25}
 header b{font-size:18px}header small{display:block;opacity:.75;font-size:11px}
@@ -37,6 +41,12 @@ label{font-size:.82rem;color:#555;font-weight:600}body.dark label{color:#9aa5b1}
 .tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:2px solid var(--ln)}.tabs a{padding:10px 16px;text-decoration:none;color:var(--tx);opacity:.6;font-size:14px;border-bottom:3px solid transparent;margin-bottom:-2px}.tabs a.on{opacity:1;color:var(--m);border-color:var(--m);font-weight:bold}body.dark .tabs a.on{color:#9db8d6;border-color:#9db8d6}
 .shead{background:linear-gradient(135deg,var(--m),var(--m2));color:#fff;border-radius:10px;padding:16px;margin-bottom:14px}
 .shead .nm{font-size:20px;font-weight:bold}.shead .meta{font-size:12.5px;opacity:.85;margin-top:4px;line-height:1.7}
+.s-search{position:relative;margin-bottom:14px}
+.s-search input{border:0;border-bottom:2px solid var(--ln);border-radius:0;background:transparent;padding:12px 40px 12px 4px;font-size:1.05rem;margin:0;min-height:0}
+.s-search input:focus{outline:none;border-color:var(--m)}
+body.dark .s-search input:focus{border-color:#9db8d6}
+.s-search svg{position:absolute;right:6px;top:50%;transform:translateY(-50%);opacity:.55;pointer-events:none}
+.s-toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
 .po{display:none}.gph{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--ln);cursor:pointer}
 #gsr{position:absolute;top:100%;right:0;left:0;background:var(--sf);color:var(--tx);border-radius:8px;box-shadow:0 6px 18px #0006;z-index:40;display:none;max-height:60vh;overflow:auto}
 #gsr a{display:block;padding:9px 12px;border-bottom:1px solid var(--ln);color:inherit;text-decoration:none;font-size:13px}
@@ -48,7 +58,7 @@ body,body.dark{background:#fff!important;color:#000!important}
 th{background:#ddd!important;color:#000!important}}
 </style></head><body>
 <header><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><svg width="34" height="27" viewBox="0 0 38 30" style="flex:none"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b"/></svg>
-<div style="min-width:0"><b>حمام التلات 👑</b><small>الموردين</small></div></div>
+<div style="min-width:0"><b>حمام التلات</b><small>الموردين</small></div></div>
 <div style="position:relative;flex:1;max-width:220px"><input id="gs" placeholder="بحث سريع…" autocomplete="off" oninput="gsearch(this.value)" style="margin:0;padding:7px 10px;font-size:13px;border:0"><div id="gsr"></div></div>
 <button id="thm" class="s" style="padding:7px 10px;flex:none" onclick="toggleTheme()">🌙</button></header>
 <nav id="nv"></nav><main id="v"></main>
@@ -141,7 +151,8 @@ ${chart()}<div class="box"><h3>أعلى الموردين من حيث الرصي�
 /* ===== الموردين ===== */
 function suppliers(q){const s=(q.get('s')||'').toLowerCase(),arch=q.get('a')=='1';
 const L=Object.values(D.suppliers).filter(x=>!!x.arch==arch&&(x.name+(x.phone||'')+(x.company||'')).toLowerCase().includes(s));
-return`<div class="row"><input id="ss" placeholder="بحث بالاسم أو الهاتف" value="${esc(s)}" oninput="location.hash='#/suppliers?s='+this.value+'&a=${arch?1:0}'" style="margin:0"><button onclick="supForm()">＋ مورد جديد</button><button class="s" onclick="location.hash='#/suppliers?a=${arch?0:1}'">${arch?'عرض النشطين':'المؤرشفين'}</button></div>
+return`<div class="s-search"><input id="ss" placeholder="ابحث عن مورد بالاسم أو رقم الهاتف…" value="${esc(s)}" oninput="location.hash='#/suppliers?s='+this.value+'&a=${arch?1:0}'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+<div class="s-toolbar"><button class="s" onclick="location.hash='#/suppliers?a=${arch?0:1}'">${arch?'عرض النشطين':'المؤرشفين'}</button><button onclick="supForm()">＋ مورد جديد</button></div>
 <div class="box"><table><tr><th>المورد</th><th>الهاتف</th><th>الرصيد</th><th>آخر حركة</th><th class="np">إجراءات</th></tr>${L.map(x=>{const b=bal(x.id),t=balTxt(b),lt=[...act(x.id)].sort((p,q)=>q.at-p.at)[0];
 return`<tr><td><a href="#/s/${x.id}">${esc(x.name)}</a><br><small>${esc(x.company||'')}</small></td><td>${esc(x.phone||'')}</td><td class="n ${t[1]}">${F(Math.abs(b))}<br><small>${t[0]}</small></td><td><small>${lt?T[lt.type].n+' · '+lt.date:'—'}</small></td>
 <td class="np"><button class="x" style="color:var(--m)" onclick="supForm('${x.id}')">تعديل</button><button class="x" style="color:var(--m)" onclick="location.hash='#/s/${x.id}?tb=stm'">كشف حساب</button><button class="x" onclick="archive('${x.id}')">${x.arch?'استرجاع':'أرشفة'}</button></td></tr>`}).join('')||'<tr><td colspan=5>لا يوجد موردين.</td></tr>'}</table></div>`}
