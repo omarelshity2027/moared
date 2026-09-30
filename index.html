@@ -4,6 +4,7 @@
 <title>الموردين – حمام التلات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root{--m:#1b3654;--m2:#0b1420;--k:#12151c;--g:#15803d;--r:#b91c1c;--au:#c9a24b;--bg:#eef1f4;--ln:#dfe3e8;--sf:#fff;--tx:#12151c}
@@ -53,17 +54,27 @@ a.lk:hover{color:#8a6a1f;border-bottom-color:var(--au)}body.dark a.lk{color:#9db
 .sub{display:block;padding-right:42px;opacity:.65;font-size:.78rem}
 #ss{width:100%;margin:0 0 12px;font-size:1.05rem;padding:14px 16px;border-radius:10px}
 .sbar{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;border-bottom:2px solid var(--ln)}
-.sbar .tabs{border:0;margin:0;flex:1;overflow-x:auto}.sbar .tabs a{cursor:pointer;white-space:nowrap}.sbar button{margin-bottom:6px;flex:none}
+.sbar .tabs{border:0;margin:0;flex:1;overflow:visible}.sbar .tabs a{cursor:pointer;white-space:nowrap}.sbar button{margin-bottom:6px;flex:none}
 .tcount{display:inline-block;min-width:22px;padding:0 6px;margin-right:6px;border-radius:11px;background:var(--ln);font-size:.75rem;text-align:center}
+.tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+#toast{z-index:200}
+#login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#0d1a2b,#1b3654);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.lc{background:var(--sf);color:var(--tx);width:100%;max-width:400px;border-radius:16px;padding:28px 22px;box-shadow:0 20px 60px #0008;text-align:center}
+.lgo{width:64px;height:64px;border-radius:14px;background:#1b3654;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.lc h2{margin:0;color:var(--m);font-size:1.4rem}body.dark .lc h2{color:#9db8d6}.lc .ls{margin:2px 0 18px;opacity:.65;font-size:.85rem}
+.lc h4{margin:0 0 10px;font-size:1rem}.lc input{text-align:right}
+.lmsg{min-height:20px;color:var(--r);font-size:.85rem;margin-bottom:8px}.lmsg.ok{color:var(--g)}
+.lnk{background:none!important;border:0;color:var(--m);min-height:0;padding:6px;font-size:.85rem;font-weight:600}.lnk:hover{color:#8a6a1f}
 </style></head><body>
 <header><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0"><svg width="34" height="27" viewBox="0 0 38 30" style="flex:none"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b"/></svg>
-<div style="min-width:0"><b>حمام التلات</b><small>الموردين</small></div></div>
+<div style="min-width:0"><b>حمام التلات</b><small id="hs">الموردين</small></div></div>
 <div style="position:relative;flex:1;max-width:220px"><input id="gs" placeholder="بحث سريع…" autocomplete="off" oninput="gsearch(this.value)" style="margin:0;padding:7px 10px;font-size:13px;border:0"><div id="gsr"></div></div>
-<button id="thm" class="s" style="padding:7px 10px;flex:none" onclick="toggleTheme()">🌙</button></header>
+<button id="thm" class="s" style="padding:7px 10px;flex:none" onclick="toggleTheme()">🌙</button><button id="lo" class="s" style="padding:7px 10px;flex:none;display:none" onclick="logout()">خروج</button></header>
 <nav id="nv"></nav><main id="v"></main>
 <div class="po"><svg width="30" height="24" viewBox="0 0 38 30" style="vertical-align:middle"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b" stroke="#000" stroke-width="0.5"/></svg>
 <b style="font-size:20px">حمام التلات</b><br>112 شارع مصطفى النحاس – أول كوبري المنهل · 01035145828</div>
 <div id="menu"></div><button id="fab">＋ إضافة حركة</button><div id="md"></div><div id="toast"></div>
+<div id="login"><div class="lc"><div class="lgo"><svg width="38" height="30" viewBox="0 0 38 30"><path d="M3 26 L1 8 L11 16 L19 3 L27 16 L37 8 L35 26Z" fill="#c9a24b"/></svg></div><h2>حمام التلات</h2><p class="ls">نظام إدارة حسابات الموردين</p><div id="lbody"><p style="opacity:.7">جارٍ التحميل…</p></div></div></div>
 <script>
 /* ===== إعداد Firebase: الصق إعدادات مشروعك هنا. لو فاضي، النظام يشتغل محليًا على المتصفح فقط ===== */
 const FB={
@@ -75,17 +86,12 @@ const FB={
   messagingSenderId:"628900716110",
   appId:"1:628900716110:web:d395e932d9d5048a172d1f"
 };
-const COLS=['suppliers','txs','audit','meta'];let D={suppliers:{},txs:{},audit:{},meta:{}},fs=null;
-const ls=()=>localStorage.setItem('sup_v1',JSON.stringify(D));
+let D={suppliers:{},txs:{},audit:{},meta:{},users:{}},fs=null,auth=null,ME=null;const ls=()=>{};
 if(localStorage.getItem('sup_theme')=='dark')document.body.classList.add('dark');
 function toggleTheme(){document.body.classList.toggle('dark');localStorage.setItem('sup_theme',document.body.classList.contains('dark')?'dark':'light');$('#thm').textContent=document.body.classList.contains('dark')?'☀️':'🌙'}
-try{D=Object.assign(D,JSON.parse(localStorage.getItem('sup_v1')))}catch(e){}
-if(FB.apiKey&&window.firebase){firebase.initializeApp(FB);fs=firebase.firestore();
-COLS.forEach(c=>fs.collection('sup_'+c).onSnapshot(s=>{s.docChanges().forEach(h=>{h.type=='removed'?delete D[c][h.doc.id]:D[c][h.doc.id]=h.doc.data()});ls();render()}))}
-/* رفع البيانات المحلية الموجودة مرة واحدة عند أول ربط بـ Firestore */
-if(fs&&!localStorage.getItem('sup_migrated')){try{COLS.forEach(c=>Object.values(D[c]||{}).forEach(o=>o&&o.id&&fs.collection('sup_'+c).doc(o.id).set(o)));localStorage.setItem('sup_migrated','1')}catch(e){console.error(e)}}
-function put(c,o){D[c][o.id]=o;ls();fs&&fs.collection('sup_'+c).doc(o.id).set(o)}
-function del(c,id){delete D[c][id];ls();fs&&fs.collection('sup_'+c).doc(id).delete()}
+const wfail=e=>{console.error(e);toast('لم يتم الحفظ: '+(e&&e.code=='permission-denied'?'ليست لديك صلاحية لهذه العملية':'تحقق من الاتصال'),1)};
+function put(c,o){D[c][o.id]=o;fs&&fs.collection('sup_'+c).doc(o.id).set(o).catch(wfail)}
+function del(c,id){delete D[c][id];fs&&fs.collection('sup_'+c).doc(id).delete().catch(wfail)}
 /* ===== أدوات ===== */
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8),ym=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),today=()=>{const d=new Date();return ym(d)+'-'+String(d.getDate()).padStart(2,'0')};
@@ -124,28 +130,24 @@ return{due,paid,linked,st:due<=0?'مدفوعة بالكامل':paid+red>0?'مد�
 const invs=sid=>act(sid).filter(t=>t.type=='invoice').sort((a,b)=>a.date<b.date?-1:1);
 function invoicesSection(sid){const L=[...invs(sid)].reverse();if(!L.length)return'';
 return`<div class="box"><h3>الفواتير (${L.length})</h3>${L.map(i=>{const d=idue(i);const done=d.due<=0;
-const adj=d.linked.map(t=>`<div class="row" style="margin:2px 0;align-items:center"><span class="tag">${T[t.type].n}</span><span class="n">${F(t.amount)}</span><small style="flex:2">${esc(t.note||'')}</small>${phBtn(t)}<button class="x" style="color:var(--m)" onclick="editTx('${t.id}')">تعديل</button><button class="x" onclick="voidTx('${t.id}')">إلغاء</button></div>`).join('');
+const adj=d.linked.map(t=>`<div class="row" style="margin:2px 0;align-items:center"><span class="tag">${T[t.type].n}</span><span class="n">${F(t.amount)}</span><small style="flex:2">${esc(t.note||'')}</small>${phBtn(t)}${can('tx_edit')?`<button class="x" style="color:var(--m)" onclick="editTx('${t.id}')">تعديل</button>`:''}${can('tx_void')?`<button class="x" onclick="voidTx('${t.id}')">إلغاء</button>`:''}</div>`).join('');
 return`<div style="border:1px solid var(--ln);border-radius:8px;padding:10px;margin-bottom:8px">
 <div class="row" style="justify-content:space-between;margin:0"><b>${i.no}</b><small>${i.date}${i.due?' · استحقاق '+i.due:''}</small></div>
 <div>إجمالي الفاتورة: ${F(i.amount)}</div>
 ${i.photos&&i.photos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">${i.photos.map(u=>`<img class="gph" src="${u}" onclick="viewImg('${u}')">`).join('')}</div>`:'<small style="color:#999">بدون صورة أصل</small>'}
 ${adj?`<div style="margin-top:6px">${adj}</div>`:''}
 <div class="row" style="margin-top:6px;justify-content:space-between"><span>المدفوع: ${F(d.paid)}</span><b class="${done?'dr':'cr'}">${done?d.st:'المتبقي: '+F(d.due)}</b></div>
-<div class="row np" style="margin-top:6px"><button class="s" onclick="openForm('shortage','${sid}','${i.id}')">+ فواقص</button><button class="s" onclick="openForm('extra','${sid}','${i.id}')">+ زيادة</button><button class="s" onclick="openForm('return','${sid}','${i.id}')">+ مرتجع</button><button class="x" style="color:var(--m)" onclick="editTx('${i.id}')">تعديل الفاتورة</button></div></div>`}).join('')}</div>`}
-function log(op,after,before){const o={id:uid(),at:Date.now(),by:'المدير',op,ref:after.no||after.name||after.id,before:before||null,after};put('audit',o)}
+<div class="row np" style="margin-top:6px">${can('tx_add')?`<button class="s" onclick="openForm('shortage','${sid}','${i.id}')">+ فواقص</button><button class="s" onclick="openForm('extra','${sid}','${i.id}')">+ زيادة</button><button class="s" onclick="openForm('return','${sid}','${i.id}')">+ مرتجع</button>`:''}${can('tx_edit')?`<button class="x" style="color:var(--m)" onclick="editTx('${i.id}')">تعديل الفاتورة</button>`:''}</div></div>`}).join('')}</div>`}
+function log(op,after,before){const o={id:uid(),at:Date.now(),by:ME?ME.name:'—',op,ref:after.no||after.name||after.id,before:before||null,after};put('audit',o)}
 /* ===== التنقل ===== */
 const H=()=>{const[p,q]=location.hash.slice(1).split('?');return{p:p||'/',q:new URLSearchParams(q||'')}};
-function render(){const{p,q}=H();const NV=[['/','الرئيسية'],['/suppliers','الموردين'],['/txs','الحركات'],['/reports','التقارير'],['/settings','الإعدادات']];
+function render(){if(!ME)return;hdr();const{p,q}=H();const NV=[['/','الرئيسية'],['/suppliers','الموردين'],['/txs','الحركات'],['/reports','التقارير'],['/settings','الإعدادات']].filter(n=>n[0]!='/settings'||can('settings'));
 $('#nv').innerHTML=NV.map(n=>`<a href="#${n[0]}" class="${p==n[0]||(n[0]=='/suppliers'&&p.startsWith('/s/'))?'on':''}">${n[1]}</a>`).join('');
 $('#v').innerHTML=p=='/'?dash():p=='/suppliers'?suppliers(q):p.startsWith('/s/')?supplier(p.slice(3),q):p=='/txs'?reports(q,1):p=='/reports'?reports(q):settings()}
 addEventListener('hashchange',render);
 /* ===== الرئيسية ===== */
 function dash(){const a=act(),m=today().slice(0,7),S=Object.values(D.suppliers);
-const QA=`<div class="row np" style="margin-bottom:14px">
-<button onclick="supForm()">＋ مورد</button>
-<button class="s" onclick="openForm('invoice')">＋ فاتورة</button>
-<button class="s" onclick="openForm('payment')">＋ دفعة</button>
-<button class="s" onclick="openForm('return')">＋ مرتجع</button></div>`;
+const QA=(can('sup_add')||can('tx_add'))?`<div class="row np" style="margin-bottom:14px">${can('sup_add')?'<button onclick="supForm()">＋ مورد</button>':''}${can('tx_add')?`<button class="s" onclick="openForm('invoice')">＋ فاتورة</button><button class="s" onclick="openForm('payment')">＋ دفعة</button><button class="s" onclick="openForm('return')">＋ مرتجع</button>`:''}</div>`:'';
 const ty=(...t)=>a.filter(x=>t.includes(x.type)),inM=l=>l.filter(x=>x.date.startsWith(m));
 const over=sum(a.filter(t=>t.type=='invoice'&&t.due&&t.due<today()),t=>Math.max(idue(t).due,0));
 const K=[['إجمالي المستحقات للموردين',sum(S,s=>Math.max(bal(s.id),0)),'/suppliers','cr'],['أرصدة لنا عند الموردين',sum(S,s=>Math.max(-bal(s.id),0)),'/suppliers','dr'],
@@ -164,29 +166,29 @@ function supRows(sv,arch){const k=nrm(sv);
 const L=Object.values(D.suppliers).filter(x=>!!x.arch==arch&&(!k||nrm(x.name+' '+(x.phone||'')+' '+(x.company||'')).includes(k))).sort((x,y)=>String(x.name).localeCompare(String(y.name),'ar'));
 return`<table><tr><th>المورد</th><th>الهاتف</th><th>الرصيد</th><th>آخر حركة</th><th class="np">إجراءات</th></tr>${L.map(x=>{const b=bal(x.id),t=balTxt(b),lt=[...act(x.id)].sort((p,q)=>q.at-p.at)[0];
 return`<tr><td><a class="lk" href="#/s/${x.id}"><span class="av">${esc((x.name||'؟').trim().charAt(0))}</span>${esc(x.name)}</a>${x.company?`<small class="sub">${esc(x.company)}</small>`:''}</td><td class="n">${esc(x.phone||'')}</td><td class="n ${t[1]}">${F(Math.abs(b))}<br><small>${t[0]}</small></td><td><small>${lt?T[lt.type].n+' · '+lt.date:'—'}</small></td>
-<td class="np" style="white-space:nowrap"><button class="x" style="color:var(--m)" onclick="supForm('${x.id}')">تعديل</button><button class="x" style="color:var(--m)" onclick="location.hash='#/s/${x.id}?tb=stm'">كشف حساب</button><button class="x" style="color:var(--m)" onclick="archive('${x.id}')">${x.arch?'استرجاع':'أرشفة'}</button><button class="x" onclick="delSup('${x.id}')">حذف</button></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;padding:28px;opacity:.6">${k?'لا توجد نتائج مطابقة للبحث.':arch?'لا يوجد موردين مؤرشفين.':'لا يوجد موردين بعد.'}</td></tr>`}</table>`}
+<td class="np" style="white-space:nowrap">${can('sup_edit')?`<button class="x" style="color:var(--m)" onclick="supForm('${x.id}')">تعديل</button>`:''}<button class="x" style="color:var(--m)" onclick="location.hash='#/s/${x.id}?tb=stm'">كشف حساب</button>${can('sup_archive')?`<button class="x" style="color:var(--m)" onclick="archive('${x.id}')">${x.arch?'استرجاع':'أرشفة'}</button>`:''}${can('sup_del')?`<button class="x" onclick="delSup('${x.id}')">حذف</button>`:''}</td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;padding:28px;opacity:.6">${k?'لا توجد نتائج مطابقة للبحث.':arch?'لا يوجد موردين مؤرشفين.':'لا يوجد موردين بعد.'}</td></tr>`}</table>`}
 function suppliers(q){const sv=q.get('s')||'',arch=q.get('a')=='1';const cnt=a=>Object.values(D.suppliers).filter(x=>!!x.arch==a).length;
 return`<input id="ss" type="text" autocomplete="off" placeholder="🔍  ابحث بالاسم أو الشركة أو الهاتف…" value="${esc(sv)}" oninput="supFilter()">
-<div class="sbar np"><div class="tabs"><a class="${arch?'':'on'}" onclick="supTab(0)">الموردين<span class="tcount">${cnt(false)}</span></a><a class="${arch?'on':''}" onclick="supTab(1)">مؤرشف / خامل<span class="tcount">${cnt(true)}</span></a></div><button onclick="supForm()">＋ إضافة مورد</button></div>
+<div class="sbar np"><div class="tabs"><a class="${arch?'':'on'}" onclick="supTab(0)">الموردين<span class="tcount">${cnt(false)}</span></a><a class="${arch?'on':''}" onclick="supTab(1)">مؤرشف / خامل<span class="tcount">${cnt(true)}</span></a></div>${can('sup_add')?'<button onclick="supForm()">＋ إضافة مورد</button>':''}</div>
 <div class="box" id="slist">${supRows(sv,arch)}</div>`}
 function supFilter(){const v=$('#ss').value,arch=H().q.get('a')=='1';$('#slist').innerHTML=supRows(v,arch);history.replaceState(null,'','#/suppliers?s='+encodeURIComponent(v)+'&a='+(arch?1:0))}
 function supTab(a){const v=$('#ss')?$('#ss').value:'';location.hash='#/suppliers?s='+encodeURIComponent(v)+'&a='+a}
-function delSup(id){const s=D.suppliers[id];if(!s)return;const tx=all().filter(t=>t.sid==id);
+function delSup(id){if(need('sup_del'))return;const s=D.suppliers[id];if(!s)return;const tx=all().filter(t=>t.sid==id);
 if(tx.some(t=>isClosed(t.date)))return toast('للمورد حركات داخل فترة مقفلة. افتح الفترة أولًا أو استخدم الأرشفة',1);
 if(!tx.length){if(!confirm('حذف المورد "'+s.name+'" نهائيًا؟'))return}
-else{const w=prompt('تنبيه: المورد "'+s.name+'" لديه '+tx.length+' حركة ورصيد '+F(Math.abs(bal(id)))+'.\nالحذف نهائي: يمسح المورد وكل حركاته ولا يمكن التراجع عنه.\nلو عايز تخفيه فقط استخدم "أرشفة".\n\nللتأكيد اكتب كلمة: حذف');if(w===null)return;if(w.trim()!=='حذف')return toast('لم يتم الحذف: كلمة التأكيد غير مطابقة',1)}
+else{if(!confirm('تنبيه: المورد "'+s.name+'" لديه '+tx.length+' حركة ورصيد '+F(Math.abs(bal(id)))+'.\nالحذف نهائي: يمسح المورد وكل حركاته ولا يمكن التراجع عنه.\n\nلو عايز تخفيه فقط اختار "أرشفة".\n\nتأكيد الحذف؟'))return}
 tx.forEach(t=>del('txs',t.id));del('suppliers',id);log('حذف مورد',{id,name:s.name+' ('+tx.length+' حركة)'},s);
 toast('تم حذف المورد');location.hash='#/suppliers';render()}
-function supForm(id){const s=D.suppliers[id]||{};$('#md').innerHTML=`<div><h3>${id?'تعديل مورد':'مورد جديد'}</h3>
+function supForm(id){if(need(id?'sup_edit':'sup_add'))return;const s=D.suppliers[id]||{};$('#md').innerHTML=`<div><h3>${id?'تعديل مورد':'مورد جديد'}</h3>
 <label>اسم المورد *</label><input id="a_n" value="${esc(s.name)}"><label>اسم الشركة</label><input id="a_c" value="${esc(s.company)}">
 <label>الهاتف</label><input id="a_p" value="${esc(s.phone)}"><label>العنوان / ملاحظات</label><input id="a_o" value="${esc(s.note)}">
 ${id?'':`<div class="row"><div><label>رصيد افتتاحي</label><input id="a_b" type="number" step="0.01"></div><div><label>الاتجاه</label><select id="a_d"><option value="1">علينا للمورد</option><option value="-1">لنا عند المورد</option></select></div></div><label>تاريخ الرصيد</label><input id="a_t" type="date" value="${today()}">`}
 <div class="row"><button id="sv" onclick="supSave('${id||''}')">حفظ</button><button class="s" onclick="closeM()">إلغاء</button></div></div>`;$('#md').style.display='block'}
-function supSave(id){const n=$('#a_n').value.trim();if(!n)return toast('اسم المورد مطلوب',1);$('#sv').disabled=true;
+function supSave(id){if(need(id?'sup_edit':'sup_add'))return;const n=$('#a_n').value.trim();if(!n)return toast('اسم المورد مطلوب',1);$('#sv').disabled=true;
 const old=D.suppliers[id];const s={...(old||{id:uid(),at:Date.now()}),name:n,company:$('#a_c').value,phone:$('#a_p').value.trim(),note:$('#a_o').value};put('suppliers',s);log(id?'تعديل مورد':'إضافة مورد',s,old);
 if(!id){const b=P($('#a_b').value);if(b>0)saveTx({type:'opening',sid:s.id,amount:b,sgn:+$('#a_d').value,date:$('#a_t').value,note:'رصيد افتتاحي'},1)}
 closeM();toast('تم تسجيل العملية بنجاح');location.hash='#/s/'+s.id;render()}
-function archive(id){const s=D.suppliers[id];if(!confirm(s.arch?'استرجاع المورد؟':'أرشفة المورد؟ لن تُحذف حركاته.'))return;put('suppliers',{...s,arch:!s.arch});log('أرشفة/استرجاع مورد',s);location.hash='#/suppliers';render()}
+function archive(id){if(need('sup_archive'))return;const s=D.suppliers[id];if(!confirm(s.arch?'استرجاع المورد؟':'أرشفة المورد؟ لن تُحذف حركاته.'))return;put('suppliers',{...s,arch:!s.arch});log('أرشفة/استرجاع مورد',s);location.hash='#/suppliers';render()}
 /* ===== ملف المورد وكشف الحساب ===== */
 function supplier(id,q){const s=D.suppliers[id];if(!s)return'<p>المورد غير موجود.</p>';
 const from=q.get('f')||'',to=q.get('e')||'',ft=q.get('t')||'';const A=act(id);const b=bal(id),bt=balTxt(b);
@@ -196,14 +198,14 @@ const rows=all().filter(t=>t.sid==id).sort((x,y)=>(x.type=='opening')!=(y.type==
 let run=0;const op=sum(A.filter(t=>from&&t.date<from),t=>t.cr-t.dr);run=op;let td=0,tc=0;
 const body=rows.filter(t=>(!from||t.date>=from)&&(!to||t.date<=to)&&(!ft||t.type==ft)).map(t=>{const v=t.status=='void';if(!v){run+=t.cr-t.dr;td+=t.dr;tc+=t.cr}
 return`<tr class="${v?'v':''}"><td class="n">${t.date}</td><td>${T[t.type].n}${v?` <span class="tag np">ملغاة: ${esc(t.reason)}</span>`:''}</td><td>${esc(t.note||'')}<br><small>${t.no}${t.alloc&&t.alloc.length?' · مخصصة: '+t.alloc.map(x=>D.txs[x.i]?.no).join('، '):''}</small></td><td>${esc(D.txs[t.inv]?.no||'')}</td>
-<td class="n dr">${t.dr?F(t.dr):''}</td><td class="n cr">${t.cr?F(t.cr):''}</td><td class="n">${v?'':F(run)}</td><td class="np">${v?'':`${phBtn(t)}<button class="x" style="color:var(--m)" onclick="editTx('${t.id}')">تعديل</button><button class="x" onclick="voidTx('${t.id}')">إلغاء</button>`}</td></tr>`}).join('');
+<td class="n dr">${t.dr?F(t.dr):''}</td><td class="n cr">${t.cr?F(t.cr):''}</td><td class="n">${v?'':F(run)}</td><td class="np">${v?'':`${phBtn(t)}${can('tx_edit')?`<button class="x" style="color:var(--m)" onclick="editTx('${t.id}')">تعديل</button>`:''}${can('tx_void')?`<button class="x" onclick="voidTx('${t.id}')">إلغاء</button>`:''}`}</td></tr>`}).join('');
 const cards=[['الرصيد الحالي',F(Math.abs(b))+'<br><small>'+bt[0]+'</small>',bt[1]],['المشتريات',F(tot('invoice'))],['المرتجعات',F(tot('return'))],['الفواقص',F(tot('shortage'))],['الزيادات',F(tot('extra'))],['فروق الأسعار (صافي لصالح المورد)',F(pd)],['المدفوعات',F(tot('payment','advance'))],['آخر دفعة',lastP?F(lastP.amount)+'<br><small>'+lastP.date+'</small>':'—'],['آخر فاتورة',lastI?F(lastI.amount)+'<br><small>'+lastI.date+'</small>':'—']];
 const tab=q.get('tb')||'inv';
 return`<div class="shead"><div class="row np" style="margin:0;align-items:flex-start;justify-content:space-between">
 <div><div class="nm">${esc(s.name)} ${s.arch?'<span class="tag">مؤرشف</span>':''}</div>
 <div class="meta">${s.company?'🏢 '+esc(s.company)+'<br>':''}${s.phone?'📞 '+esc(s.phone):''}${s.phone2?' · '+esc(s.phone2):''}${s.note?'<br>📍 '+esc(s.note):''}</div></div>
 <div style="text-align:left"><div style="font-size:12px;opacity:.85">${bt[0]}</div><div style="font-size:22px;font-weight:bold">${F(Math.abs(b))}</div></div></div>
-<div class="row np" style="margin-top:12px"><button onclick="openForm('invoice','${id}')">＋ فاتورة</button><button onclick="openForm('payment','${id}')">＋ دفعة</button><button onclick="openForm('return','${id}')">＋ مرتجع</button><button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="supForm('${id}')">تعديل</button><button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="archive('${id}')">${s.arch?'استرجاع':'أرشفة'}</button><button class="s" style="background:transparent;color:#ffb4b4;border-color:#ffb4b4" onclick="delSup('${id}')">حذف</button></div></div>
+${(can('tx_add')||can('sup_edit')||can('sup_archive')||can('sup_del'))?`<div class="row np" style="margin-top:12px">${can('tx_add')?`<button onclick="openForm('invoice','${id}')">＋ فاتورة</button><button onclick="openForm('payment','${id}')">＋ دفعة</button><button onclick="openForm('return','${id}')">＋ مرتجع</button>`:''}${can('sup_edit')?`<button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="supForm('${id}')">تعديل</button>`:''}${can('sup_archive')?`<button class="s" style="background:transparent;color:#fff;border-color:#fff" onclick="archive('${id}')">${s.arch?'استرجاع':'أرشفة'}</button>`:''}${can('sup_del')?`<button class="s" style="background:transparent;color:#ffb4b4;border-color:#ffb4b4" onclick="delSup('${id}')">حذف</button>`:''}</div>`:''}</div>
 <div class="grid">${cards.slice(1).map(c=>`<div class="c"><span>${c[0]}</span><b class="${c[2]||''}">${c[1]}</b></div>`).join('')}</div>
 <div class="tabs"><a href="#/s/${id}?tb=inv" class="${tab=='inv'?'on':''}">الفواتير</a><a href="#/s/${id}?tb=stm" class="${tab=='stm'?'on':''}">كشف الحساب</a></div>
 ${tab=='stm'?`<div class="box"><div class="row np"><div><label>من</label><input type="date" value="${from}" onchange="qs('f',this.value)"></div><div><label>إلى</label><input type="date" value="${to}" onchange="qs('e',this.value)"></div>
@@ -215,14 +217,14 @@ ${from?`<tr><td colspan=6>رصيد أول الفترة</td><td class="n">${F(op)
 <div class="po" style="border:0;border-top:1px solid #000;text-align:center;margin-top:10px;font-size:11px;padding-top:6px">كشف حساب: ${esc(s.name)} · تاريخ الاستخراج: ${today()} · تم إنشاء التقرير بواسطة نظام إدارة حسابات الموردين – حمام التلات</div>
 <div class="row np"><button onclick="printStmt('${id}','${from}','${to}','${ft}')">طباعة / PDF</button><button class="s" onclick="xls('statement')">تصدير Excel</button><button class="s" onclick="wa('${id}','${from}','${to}')">إرسال عبر واتساب</button><button class="s" onclick="wa('${id}','','',1)">إرسال آخر عملية</button></div></div>`:invoicesSection(id)}`}
 function qs(k,v){const{q}=H();v?q.set(k,v):q.delete(k);location.hash=location.hash.split('?')[0]+'?'+q.toString()}
-function wa(id,f,e,last){const s=D.suppliers[id],A=act(id).filter(t=>(!f||t.date>=f)&&(!e||t.date<=e)),g=(...t)=>F(sum(A.filter(x=>t.includes(x.type)),x=>x.amount));const b=bal(id);let m;
+function wa(id,f,e,last){if(need('print'))return;const s=D.suppliers[id],A=act(id).filter(t=>(!f||t.date>=f)&&(!e||t.date<=e)),g=(...t)=>F(sum(A.filter(x=>t.includes(x.type)),x=>x.amount));const b=bal(id);let m;
 if(last){const t=[...act(id)].sort((x,y)=>y.at-x.at)[0];if(!t)return toast('لا توجد حركات',1);m=`حمام التلات 👑\n\nآخر عملية على حساب: ${s.name}\n${T[t.type].n} (${t.no})\nالقيمة: ${F(t.amount)}\nالتاريخ: ${t.date}\nالرصيد الحالي: ${F(Math.abs(b))} (${balTxt(b)[0]})`}
 else m=`حمام التلات 👑\n\nكشف حساب المورد:\n${s.name}\n\nالفترة:\n${f||'البداية'} إلى ${e||today()}\n\nإجمالي المشتريات:\n${g('invoice')}\n\nإجمالي المرتجعات:\n${g('return')}\n\nإجمالي المدفوعات:\n${g('payment','advance')}\n\nالرصيد الحالي:\n${F(Math.abs(b))} (${balTxt(b)[0]})`;
 open('https://wa.me/'+(s.phone||'').replace(/\D/g,'').replace(/^0/,'20')+'?text='+encodeURIComponent(m))}
 /* ===== كل الحركات ===== */
 /* ===== نموذج الحركة ===== */
 let curId='';
-function openForm(type,sid,invId){const S=Object.values(D.suppliers).filter(x=>!x.arch);if(!S.length){toast('أضف مورد أولًا',1);location.hash='#/suppliers';return}
+function openForm(type,sid,invId){if(need('tx_add'))return;const S=Object.values(D.suppliers).filter(x=>!x.arch);if(!S.length){toast('أضف مورد أولًا',1);location.hash='#/suppliers';return}
 sid=sid||localStorage.getItem('sup_last')||S[0].id;if(!S.some(x=>x.id==sid))sid=S[0].id;
 curId=uid();formPhotos=[];const isAdj=ADJ.includes(type);$('#md').innerHTML=`<div><h3>${T[type].n}</h3>
 <label>المورد</label><select id="f_s" onchange="sync()">${S.map(x=>`<option value="${x.id}" ${x.id==sid?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
@@ -240,7 +242,7 @@ function sync(){const sid=$('#f_s').value;const av=$('#adv');if(av){const b=bal(
 const al=$('#al');if(al){const o=invs(sid).filter(x=>idue(x).due>0);al.innerHTML='<b>توزيع الدفعة على الفواتير</b>'+(o.length?o.map(x=>`<label>${x.no} — متبقي ${F(idue(x).due)}</label><input class="al" type="number" step="0.01" min="0" data-i="${x.id}" data-d="${idue(x).due}" oninput="rem()">`).join(''):'<br><small>لا توجد فواتير غير مسددة. كامل المبلغ سيُسجل دفعة مقدمة.</small>');fill()}}
 function fill(){let r=P($('#f_a')?.value);document.querySelectorAll('.al').forEach(e=>{const x=Math.min(r,+e.dataset.d);e.value=x?x/100:'';r-=x});rem()}
 function rem(){const el=$('#rem');if(!el)return;const r=P($('#f_a').value)-sum([...document.querySelectorAll('.al')],e=>P(e.value));el.innerHTML=r>0?`<b class="dr">غير مخصص: ${F(r)} — يُسجل كدفعة مقدمة / رصيد دائن للمورد</b>`:r<0?`<b class="cr">التوزيع أكبر من الدفعة بمقدار ${F(-r)}</b>`:''}
-function formSave(type){const g=x=>$(x)?.value,amt=P(g('#f_a')),sid=g('#f_s');if(amt<=0)return toast('أدخل قيمة صحيحة أكبر من صفر',1);if(isClosed(g('#f_d')))return toast('هذه الفترة مقفلة. افتحها من الإعدادات أولًا',1);if(!g('#f_d'))return toast('اختر التاريخ',1);
+function formSave(type){if(need('tx_add'))return;const g=x=>$(x)?.value,amt=P(g('#f_a')),sid=g('#f_s');if(amt<=0)return toast('أدخل قيمة صحيحة أكبر من صفر',1);if(isClosed(g('#f_d')))return toast('هذه الفترة مقفلة. افتحها من الإعدادات أولًا',1);if(!g('#f_d'))return toast('اختر التاريخ',1);
 if(type=='settlement'&&!g('#f_n').trim())return toast('سبب التسوية مطلوب',1);
 let alloc;if(type=='payment'){alloc=[...document.querySelectorAll('.al')].map(e=>({i:e.dataset.i,a:P(e.value),d:+e.dataset.d})).filter(x=>x.a>0);
 if(alloc.some(x=>x.a>x.d))return toast('مبلغ مخصص أكبر من المتبقي على فاتورة',1);if(sum(alloc,x=>x.a)>amt)return toast('مجموع التوزيع أكبر من قيمة الدفعة',1);alloc=alloc.map(x=>({i:x.i,a:x.a}))}
@@ -250,33 +252,33 @@ localStorage.setItem('sup_last',sid);saveTx({id:curId,type,sid,amount:amt,sgn:ty
 closeM();toast(type=='payment'||type=='advance'?'تم تسجيل الدفعة بنجاح وتحديث حساب المورد':type=='return'?'تم تسجيل المرتجع وتحديث الرصيد':'تم تسجيل العملية بنجاح');render()}
 function saveTx(o,quiet){if(o.id&&D.txs[o.id])return;/* منع التكرار: نفس المعرف لا يُسجل مرتين */
 const n=all().filter(t=>T[t.type].p==T[o.type].p).length+1,sg=o.sgn;
-const t={id:o.id||uid(),sid:o.sid,type:o.type,no:T[o.type].p+'-'+String(n).padStart(5,'0'),date:o.date,amount:o.amount,cr:sg>0?o.amount:0,dr:sg<0?o.amount:0,inv:o.inv||'',due:o.due||'',method:o.method||'',ref:o.ref||'',note:o.note||'',status:'active',by:'المدير',at:Date.now()};
+const t={id:o.id||uid(),sid:o.sid,type:o.type,no:T[o.type].p+'-'+String(n).padStart(5,'0'),date:o.date,amount:o.amount,cr:sg>0?o.amount:0,dr:sg<0?o.amount:0,inv:o.inv||'',due:o.due||'',method:o.method||'',ref:o.ref||'',note:o.note||'',status:'active',by:ME?ME.name:'—',at:Date.now()};
 if(o.alloc&&o.alloc.length)t.alloc=o.alloc;if(o.photos&&o.photos.length)t.photos=o.photos;put('txs',t);log('تسجيل '+T[o.type].n,t)}
-function voidTx(id){const t=D.txs[id];if(isClosed(t.date))return toast('هذه الفترة مقفلة. افتحها من الإعدادات أولًا',1);const r=prompt('سبب الإلغاء (مطلوب):');if(!r||!r.trim())return;if(!confirm('تأكيد إلغاء '+t.no+'؟ ستُستثنى من الرصيد وتبقى في السجل.'))return;
+function voidTx(id){if(need('tx_void'))return;const t=D.txs[id];if(isClosed(t.date))return toast('هذه الفترة مقفلة. افتحها من الإعدادات أولًا',1);const r=prompt('سبب الإلغاء (مطلوب):');if(!r||!r.trim())return;if(!confirm('تأكيد إلغاء '+t.no+'؟ ستُستثنى من الرصيد وتبقى في السجل.'))return;
 const n={...t,status:'void',reason:r.trim(),voidAt:Date.now()};put('txs',n);log('إلغاء حركة',n,t);toast('تم إلغاء الحركة وتحديث الرصيد');render()}
 /* ===== الإعدادات ===== */
-function settings(){const A=Object.values(D.audit).sort((x,y)=>y.at-x.at).slice(0,30);
-return`<div class="box"><h3>بيانات الشركة (تظهر في الطباعة و PDF)</h3><label>اسم الشركة</label><input id="co_n" value="${esc(CO().name)}"><label>العنوان</label><input id="co_a" value="${esc(CO().addr)}"><div class="row"><div><label>الهاتف</label><input id="co_p" value="${esc(CO().phone)}"></div><div><label>سجل تجاري / رقم ضريبي (اختياري)</label><input id="co_t" value="${esc(CO().tax)}"></div></div><button onclick="coSave()">حفظ بيانات الشركة</button></div>
+function settings(){if(!can('settings'))return'<div class="box"><p>ليست لديك صلاحية لفتح الإعدادات.</p></div>';const A=Object.values(D.audit).sort((x,y)=>y.at-x.at).slice(0,30);
+return`${usersBox()}<div class="box"><h3>بيانات الشركة (تظهر في الطباعة و PDF)</h3><label>اسم الشركة</label><input id="co_n" value="${esc(CO().name)}"><label>العنوان</label><input id="co_a" value="${esc(CO().addr)}"><div class="row"><div><label>الهاتف</label><input id="co_p" value="${esc(CO().phone)}"></div><div><label>سجل تجاري / رقم ضريبي (اختياري)</label><input id="co_t" value="${esc(CO().tax)}"></div></div><button onclick="coSave()">حفظ بيانات الشركة</button></div>
 <div class="box"><h3>طرق الدفع</h3>${methods().map((m,i)=>`<span class="tag">${esc(m)} <button class="x" onclick="mDel(${i})">×</button></span> `).join('')}<div class="row" style="margin-top:8px"><input id="nm" placeholder="طريقة جديدة (مثال: Vodafone Cash)"><button onclick="mAdd()">إضافة</button></div></div>
 <div class="box"><h3>إقفال الفترات</h3>${closed().map(m=>`<span class="tag">${m} <button class="x" onclick="clo('${m}',1)">فتح</button></span> `).join('')||'<small>لا توجد فترات مقفلة.</small>'}<div class="row" style="margin-top:8px"><input id="cm" type="month"><button onclick="clo($('#cm').value)">إقفال الشهر</button></div><small>بعد الإقفال لا يمكن إضافة أو تعديل أو إلغاء حركة بتاريخ داخل الشهر إلا بعد فتحه، وكل فتح وإقفال يُسجل.</small></div>
 <div class="box"><h3>النسخ الاحتياطي</h3><button class="s" onclick="bk()">تنزيل نسخة JSON</button><p><small>الحفظ: ${fs?'Firebase Firestore متصل':'محلي على هذا المتصفح فقط — الصق إعدادات Firebase داخل الملف للمزامنة'}</small></p></div>
 <div class="box"><h3>سجل العمليات (آخر 30)</h3><table>${A.map(a=>`<tr><td><small>${new Date(a.at).toLocaleString('ar-EG')}</small></td><td>${a.op}</td><td>${esc(a.ref)}</td><td>${a.by}</td></tr>`).join('')||'<tr><td>لا يوجد.</td></tr>'}</table></div>`}
-function mAdd(){const v=$('#nm').value.trim();if(!v)return;put('meta',{id:'methods',list:[...methods(),v]});render()}
-function mDel(i){const l=methods();l.splice(i,1);put('meta',{id:'methods',list:l});render()}
-function bk(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='suppliers-backup-'+today()+'.json';a.click()}
+function mAdd(){if(need('settings'))return;const v=$('#nm').value.trim();if(!v)return;put('meta',{id:'methods',list:[...methods(),v]});render()}
+function mDel(i){if(need('settings'))return;const l=methods();l.splice(i,1);put('meta',{id:'methods',list:l});render()}
+function bk(){if(need('backup'))return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify((({users,...r})=>r)(D))],{type:'application/json'}));a.download='suppliers-backup-'+today()+'.json';a.click()}
 /* ===== المرحلة 2: تقارير، رسوم، تعديل، إقفال ===== */
 const closed=()=>D.meta.closed?.list||[],isClosed=d=>closed().includes((d||'').slice(0,7));
-function clo(m,open){if(!m)return toast('اختر الشهر',1);if(!confirm((open?'فتح':'إقفال')+' فترة '+m+'؟'))return;
+function clo(m,open){if(need('period'))return;if(!m)return toast('اختر الشهر',1);if(!confirm((open?'فتح':'إقفال')+' فترة '+m+'؟'))return;
 const l=open?closed().filter(x=>x!=m):[...new Set([...closed(),m])];put('meta',{id:'closed',list:l});D.meta.closed={id:'closed',list:l};log(open?'فتح فترة':'إقفال فترة',{id:m,name:m});toast('تم تسجيل العملية بنجاح');render()}
-function editTx(id){const t=D.txs[id];if(isClosed(t.date))return toast('هذه الفترة مقفلة. افتحها من الإعدادات أولًا',1);formPhotos=[...(t.photos||[])];
+function editTx(id){if(need('tx_edit'))return;const t=D.txs[id];if(isClosed(t.date))return toast('هذه الفترة مقفلة. افتحها من الإعدادات أولًا',1);formPhotos=[...(t.photos||[])];
 $('#md').innerHTML=`<div><h3>تعديل ${t.no}</h3><label>التاريخ</label><input id="e_d" type="date" value="${t.date}"><label>القيمة</label><input id="e_a" type="number" step="0.01" value="${t.amount/100}"><label>ملاحظات</label><input id="e_n" value="${esc(t.note)}"><label>صور</label><input type="file" accept="image/*" multiple onchange="addPhotos(event)"><div id="phprev" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div><label>سبب التعديل *</label><input id="e_r"><div class="row"><button id="sv" onclick="editSave('${id}')">حفظ</button><button class="s" onclick="closeM()">إلغاء</button></div></div>`;$('#md').style.display='block';phPrev()}
-function editSave(id){const t=D.txs[id],a=P($('#e_a').value),d=$('#e_d').value,r=$('#e_r').value.trim();if(a<=0||!d)return toast('بيانات غير صحيحة',1);if(!r)return toast('سبب التعديل مطلوب',1);
+function editSave(id){if(need('tx_edit'))return;const t=D.txs[id],a=P($('#e_a').value),d=$('#e_d').value,r=$('#e_r').value.trim();if(a<=0||!d)return toast('بيانات غير صحيحة',1);if(!r)return toast('سبب التعديل مطلوب',1);
 if(isClosed(d))return toast('التاريخ داخل فترة مقفلة',1);if(t.alloc&&sum(t.alloc,x=>x.a)>a)return toast('القيمة أقل من المبلغ المخصص للفواتير',1);
 $('#sv').disabled=true;const n={...t,date:d,amount:a,note:$('#e_n').value,cr:t.cr?a:0,dr:t.dr?a:0};if(formPhotos.length)n.photos=formPhotos.slice();else delete n.photos;put('txs',n);log('تعديل حركة: '+r,n,t);closeM();toast('تم تسجيل العملية بنجاح');render()}
 function chart(){const a=act(),ms=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);ms.push(ym(d))}
 const f=(m,...t)=>sum(a.filter(x=>t.includes(x.type)&&x.date.startsWith(m)),x=>x.amount),pu=ms.map(m=>f(m,'invoice')),pa=ms.map(m=>f(m,'payment','advance')),mx=Math.max(...pu,...pa,1);
 return`<div class="box"><h3>المشتريات والمدفوعات — آخر 6 أشهر</h3><div style="display:flex;gap:6px">${ms.map((m,i)=>`<div style="flex:1;text-align:center;font-size:10px"><div style="display:flex;gap:2px;align-items:flex-end;height:100px;justify-content:center"><i style="width:40%;background:var(--m);height:${pu[i]/mx*100}%"></i><i style="width:40%;background:var(--g);height:${pa[i]/mx*100}%"></i></div>${m.slice(5)}</div>`).join('')}</div><small><span style="color:var(--m)">■</span> مشتريات <span style="color:var(--g)">■</span> مدفوعات</small></div>`}
-function xls(n){const c=$('#rt').cloneNode(true);c.querySelectorAll('.np,button').forEach(x=>x.remove());
+function xls(n){if(need('print'))return;const c=$('#rt').cloneNode(true);c.querySelectorAll('.np,button').forEach(x=>x.remove());
 const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff<html dir="rtl"><meta charset="utf-8"><body>'+c.outerHTML+'</body></html>'],{type:'application/vnd.ms-excel'}));a.download=n+'-'+today()+'.xls';a.click()}
 function reports(q,compact){const g=k=>q.get(k)||'',r=g('r')||'tx',f=g('f'),e=g('e'),sid=g('s'),tyL=g('t').split(',').filter(Boolean),mt=g('m');
 const L=act().filter(t=>(!f||t.date>=f)&&(!e||t.date<=e)&&(!sid||t.sid==sid)&&(!tyL.length||tyL.includes(t.type))&&(!mt||t.method==mt)).sort((x,y)=>x.date<y.date?-1:1);
@@ -304,7 +306,7 @@ return`<div class="row np">${R.map(x=>`<button class="${r==x[0]?'':'s'}" onclick
 <div class="row np"><button onclick="printRep('${ti}','${f}','${e}','${sid}')">طباعة / PDF</button><button class="s" onclick="xls('${r}')">تصدير Excel</button></div>`}
 /* ===== الطباعة / PDF الاحترافي ===== */
 const CO=()=>({name:'حمام التلات',addr:'112 شارع مصطفى النحاس – أول كوبري المنهل',phone:'01035145828',tax:'',...(D.meta.company||{})});
-function coSave(){put('meta',{id:'company',name:$('#co_n').value.trim(),addr:$('#co_a').value.trim(),phone:$('#co_p').value.trim(),tax:$('#co_t').value.trim()});toast('تم حفظ بيانات الشركة')}
+function coSave(){if(need('settings'))return;put('meta',{id:'company',name:$('#co_n').value.trim(),addr:$('#co_a').value.trim(),phone:$('#co_p').value.trim(),tax:$('#co_t').value.trim()});toast('تم حفظ بيانات الشركة')}
 const PCSS=`@page{size:A4;margin:12mm 11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:Cairo,Tahoma,"Segoe UI",Arial,sans-serif;color:#12151c;margin:0;font-size:12px;line-height:1.55}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:10px}.co{display:flex;align-items:center;gap:12px}
@@ -333,7 +335,7 @@ function printDoc(o){const c=CO();const html=`<!DOCTYPE html><html lang="ar" dir
 const f=document.createElement('iframe');f.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0';document.body.appendChild(f);
 const w=f.contentWindow,d=w.document;d.open();d.write(html);d.close();
 Promise.race([d.fonts?d.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1800))]).then(()=>setTimeout(()=>{const old=document.title;document.title=o.file;try{w.focus();w.print()}catch(e){toast('تعذر فتح نافذة الطباعة',1)}document.title=old;setTimeout(()=>f.remove(),60000)},200))}
-function printStmt(id,from,to,ft){const s=D.suppliers[id];if(!s)return;const A=act(id);
+function printStmt(id,from,to,ft){if(need('print'))return;const s=D.suppliers[id];if(!s)return;const A=act(id);
 const op=from?sum(A.filter(t=>t.date<from),t=>t.cr-t.dr):0;let run=op,td=0,tc=0;
 const rows=A.filter(t=>(!from||t.date>=from)&&(!to||t.date<=to)&&(!ft||t.type==ft)).sort((x,y)=>(x.type=='opening')!=(y.type=='opening')?(x.type=='opening'?-1:1):x.date==y.date?x.at-y.at:x.date<y.date?-1:1);
 const lb=v=>v>0?'علينا':v<0?'لنا':'',B=v=>F(Math.abs(v))+(lb(v)?' <small>'+lb(v)+'</small>':'');
@@ -347,8 +349,8 @@ const html=`<div class="two"><div class="bx"><h4>بيانات المورد</h4><
 <div class="fin"><span>الرصيد النهائي المستحق</span><span>${F(Math.abs(run))} — ${balTxt(run)[0]}</span></div>
 <div class="sg"><div>أمين الحسابات</div><div>المدير</div><div>اعتماد المورد</div></div>`;
 printDoc({file:'كشف حساب - '+s.name+' - '+today(),title:'كشف حساب مورد',body:html})}
-function printRep(ti,f,e,sid){const t=$('#rt');if(!t)return;const c=t.cloneNode(true);c.querySelectorAll('.np,button').forEach(x=>x.remove());c.className='tb';c.removeAttribute('id');const sp=sid&&D.suppliers[sid];
-const body=`<div class="two"><div class="bx"><h4>بيانات التقرير</h4><div class="in"><table class="kv"><tr><td>التقرير</td><td><b>${esc(ti)}</b></td></tr><tr><td>الفترة</td><td>${f||'—'} إلى ${e||'—'}</td></tr>${sp?`<tr><td>المورد</td><td>${esc(sp.name)}</td></tr>`:''}<tr><td>المستخدم</td><td>المدير</td></tr></table></div></div></div>${c.outerHTML}<div class="sg"><div>أمين الحسابات</div><div>المدير</div></div>`;
+function printRep(ti,f,e,sid){if(need('print'))return;const t=$('#rt');if(!t)return;const c=t.cloneNode(true);c.querySelectorAll('.np,button').forEach(x=>x.remove());c.className='tb';c.removeAttribute('id');const sp=sid&&D.suppliers[sid];
+const body=`<div class="two"><div class="bx"><h4>بيانات التقرير</h4><div class="in"><table class="kv"><tr><td>التقرير</td><td><b>${esc(ti)}</b></td></tr><tr><td>الفترة</td><td>${f||'—'} إلى ${e||'—'}</td></tr>${sp?`<tr><td>المورد</td><td>${esc(sp.name)}</td></tr>`:''}<tr><td>المستخدم</td><td>${esc(ME?ME.name:'')}</td></tr></table></div></div></div>${c.outerHTML}<div class="sg"><div>أمين الحسابات</div><div>المدير</div></div>`;
 printDoc({file:ti+' - '+today(),title:ti,body})}
 /* ===== الزر العائم ===== */
 function closeM(){$('#md').style.display='none'}
@@ -356,6 +358,64 @@ const fb=$('#fab'),mn=$('#menu');mn.innerHTML=MENU.map(k=>`<a data-k="${k}">${ME
 fb.onclick=e=>{e.stopPropagation();mn.style.display=mn.style.display=='block'?'none':'block'};
 mn.onclick=e=>{const k=e.target.dataset.k;if(!k)return;mn.style.display='none';const m=H().p.match(/^\/s\/(.+)/);openForm(k,m&&m[1])};
 document.onclick=e=>{mn.style.display='none';if(!e.target.closest('#gs')&&!e.target.closest('#gsr'))$('#gsr').style.display='none'};
+/* ===== المصادقة والصلاحيات ===== */
+const ROLES={admin:{n:'مدير'},accountant:{n:'محاسب'},viewer:{n:'مشاهد (عرض فقط)'}};
+const PERM={admin:['view','print','sup_add','sup_edit','sup_archive','sup_del','tx_add','tx_edit','tx_void','period','settings','users','audit','backup'],
+accountant:['view','print','sup_add','sup_edit','sup_archive','tx_add'],viewer:['view','print']};
+const PLAB=[['view','عرض الموردين والحركات والتقارير'],['print','طباعة وتصدير كشوف الحساب'],['sup_add','إضافة موردين'],['sup_edit','تعديل بيانات الموردين'],['sup_archive','أرشفة واسترجاع الموردين'],['tx_add','إضافة فواتير ودفعات ومرتجعات'],['tx_edit','تعديل الحركات'],['tx_void','إلغاء الحركات'],['sup_del','حذف الموردين نهائيًا'],['period','إقفال وفتح الفترات'],['settings','الإعدادات وبيانات الشركة'],['backup','النسخ الاحتياطي'],['audit','سجل العمليات'],['users','إدارة المستخدمين والصلاحيات']];
+const can=p=>!!ME&&(PERM[ME.role]||[]).includes(p);
+const need=p=>{if(can(p))return false;toast('ليست لديك صلاحية لهذه العملية',1);return true};
+function hdr(){const h=$('#hs');if(h)h.textContent=ME?ME.name+' · '+ROLES[ME.role].n:'الموردين';$('#lo').style.display=ME?'':'none';$('#fab').style.display=can('tx_add')?'':'none'}
+let unsubs=[],myUn=null,SETUP=false,LM='loading';
+function startData(){stopData();const cols=['suppliers','txs','meta',...(can('audit')?['audit']:[]),...(can('users')?['users']:[])];
+cols.forEach(c=>unsubs.push(fs.collection('sup_'+c).onSnapshot(sn=>{sn.docChanges().forEach(h=>{h.type=='removed'?delete D[c][h.doc.id]:D[c][h.doc.id]=h.doc.data()});render()},e=>{console.error(c,e);toast('تعذر قراءة البيانات — تحقق من قواعد Firestore والصلاحيات',1)})))}
+function stopData(){unsubs.forEach(u=>u());unsubs=[];D={suppliers:{},txs:{},audit:{},meta:{},users:{}}}
+const aerr=x=>({'auth/invalid-credential':'البريد الإلكتروني أو كلمة المرور غير صحيحة','auth/wrong-password':'كلمة المرور غير صحيحة','auth/user-not-found':'لا يوجد حساب بهذا البريد','auth/invalid-email':'صيغة البريد الإلكتروني غير صحيحة','auth/too-many-requests':'محاولات كثيرة، انتظر قليلًا ثم حاول مرة أخرى','auth/network-request-failed':'تعذر الاتصال بالإنترنت','auth/email-already-in-use':'هذا البريد مسجّل بالفعل','auth/weak-password':'كلمة المرور ضعيفة (6 أحرف على الأقل)','auth/operation-not-allowed':'فعّل تسجيل الدخول بالبريد وكلمة المرور من Firebase Console ← Authentication','auth/user-disabled':'هذا الحساب موقوف'}[x.code]||('حدث خطأ: '+(x.code||x.message)));
+const lmsg=(t,ok)=>{const m=$('#lmsg');if(m){m.textContent=t;m.className='lmsg'+(ok?' ok':'')}};
+function lv(mode,msg){LM=mode;$('#login').style.display='flex';
+const I=(id,ph,t,ac)=>`<input id="${id}" type="${t||'text'}" placeholder="${ph}" autocomplete="${ac||'off'}" onkeydown="if(event.key=='Enter')lgo()">`,M='<div class="lmsg" id="lmsg"></div>';
+$('#lbody').innerHTML=mode=='loading'?'<p style="opacity:.7">جارٍ التحميل…</p>':
+mode=='nofb'?'<p>تعذر تحميل Firebase. تأكد من اتصال الإنترنت ثم أعد المحاولة.</p><button style="width:100%" onclick="location.reload()">إعادة المحاولة</button>':
+mode=='login'?`${I('l_e','البريد الإلكتروني','email','username')}${I('l_p','كلمة المرور','password','current-password')}${M}<button style="width:100%" onclick="lgo()">تسجيل الدخول</button><div><button class="lnk" onclick="lv('reset')">نسيت كلمة المرور؟</button></div><div><button class="lnk" onclick="lv('setup')">أول مرة؟ إنشاء حساب المدير</button></div>`:
+mode=='reset'?`<h4>استعادة كلمة المرور</h4>${I('l_e','البريد الإلكتروني','email','username')}${M}<button style="width:100%" onclick="lgo()">إرسال رابط الاستعادة</button><div><button class="lnk" onclick="lv('login')">رجوع لتسجيل الدخول</button></div>`:
+mode=='setup'?`<h4>إنشاء حساب المدير الأول</h4><small style="display:block;margin-bottom:10px;opacity:.7">يعمل هذا الخيار مرة واحدة فقط قبل إعداد النظام.</small>${I('s_n','الاسم')}${I('s_e','البريد الإلكتروني','email','username')}${I('s_p','كلمة المرور (6 أحرف على الأقل)','password','new-password')}${I('s_q','تأكيد كلمة المرور','password','new-password')}${M}<button style="width:100%" onclick="lgo()">إنشاء الحساب</button><div><button class="lnk" onclick="lv('login')">رجوع لتسجيل الدخول</button></div>`:
+mode=='pending'?`<p>تم الدخول بالحساب <b dir="ltr">${esc(msg)}</b> لكنه غير مفعّل في النظام أو موقوف.<br>تواصل مع المدير لتفعيل حسابك.</p><button style="width:100%" onclick="logout()">تسجيل الخروج</button>`:'';
+setTimeout(()=>{const f=$('#l_e')||$('#s_n');f&&f.focus()},50)}
+async function lgo(){try{
+if(LM=='login'){const e=$('#l_e').value.trim(),p=$('#l_p').value;if(!e||!p)return lmsg('أدخل البريد الإلكتروني وكلمة المرور');await auth.signInWithEmailAndPassword(e,p)}
+else if(LM=='reset'){const e=$('#l_e').value.trim();if(!e)return lmsg('أدخل البريد الإلكتروني');await auth.sendPasswordResetEmail(e);lmsg('تم إرسال رابط الاستعادة إلى بريدك',1)}
+else if(LM=='setup'){const n=$('#s_n').value.trim(),e=$('#s_e').value.trim(),p=$('#s_p').value;if(!n||!e)return lmsg('الاسم والبريد مطلوبان');if(p.length<6)return lmsg('كلمة المرور 6 أحرف على الأقل');if(p!==$('#s_q').value)return lmsg('كلمتا المرور غير متطابقتين');
+SETUP=true;try{const c=await auth.createUserWithEmailAndPassword(e,p),u=c.user.uid,b=fs.batch();b.set(fs.collection('sup_users').doc(u),{id:u,name:n,email:e,role:'admin',active:true,at:Date.now()});b.set(fs.collection('sup_meta').doc('setup'),{id:'setup',by:u,at:Date.now()});await b.commit()}
+catch(x){if(x.code=='permission-denied'){lmsg('تم إعداد النظام من قبل. اطلب من المدير إنشاء حساب لك.');auth.signOut()}else throw x}finally{SETUP=false}}
+}catch(x){lmsg(aerr(x))}}
+function logout(){auth&&auth.signOut()}
+function initAuth(){if(!window.firebase)return lv('nofb');
+firebase.initializeApp(FB);auth=firebase.auth();fs=firebase.firestore();
+auth.onAuthStateChanged(u=>{if(myUn){myUn();myUn=null}
+if(!u){ME=null;stopData();$('#v').innerHTML='';$('#nv').innerHTML='';hdr();lv('login');return}
+myUn=fs.collection('sup_users').doc(u.uid).onSnapshot(d=>{const x=d.exists?d.data():null;
+if(!x||x.active===false||!ROLES[x.role]){if(SETUP&&!x)return;ME=null;stopData();hdr();lv('pending',u.email);return}
+const prev=ME;ME={...x,uid:u.uid};
+if(!prev){$('#login').style.display='none';startData();if(!location.hash)location.hash='#/'}
+else if(prev.role!==ME.role){location.reload();return}
+render()},e=>{console.error(e);lv('pending',u.email)})})}
+/* ===== إدارة المستخدمين (للمدير) ===== */
+function usersBox(){if(!can('users'))return'';const U=Object.values(D.users).sort((a,b)=>(a.at||0)-(b.at||0)),RK=Object.keys(ROLES);
+return`<div class="box"><h3>المستخدمون والصلاحيات</h3><table><tr><th>المستخدم</th><th>الصلاحية</th><th>الحالة</th><th class="np"></th></tr>${U.map(u=>{const me=u.id==ME.uid;
+return`<tr><td><b>${esc(u.name)}</b>${me?' <span class="tag">أنت</span>':''}<br><small dir="ltr">${esc(u.email)}</small></td><td>${me?ROLES[u.role].n:`<select style="margin:0;min-height:38px" onchange="usrRole('${u.id}',this.value)">${RK.map(r=>`<option value="${r}" ${u.role==r?'selected':''}>${ROLES[r].n}</option>`).join('')}</select>`}</td><td>${u.active===false?'<span class="tag">موقوف</span>':'<span class="tag" style="background:#d9f2e3;color:#14532d">نشط</span>'}</td><td class="np" style="white-space:nowrap">${me?'':`<button class="x" style="color:var(--m)" onclick="usrReset('${u.id}')">كلمة المرور</button><button class="x" style="color:var(--m)" onclick="usrToggle('${u.id}')">${u.active===false?'تفعيل':'إيقاف'}</button><button class="x" onclick="usrDel('${u.id}')">حذف</button>`}</td></tr>`}).join('')}</table>
+<h4 style="margin:16px 0 4px">إضافة مستخدم</h4><div class="row"><div><label>الاسم</label><input id="u_n"></div><div><label>البريد الإلكتروني</label><input id="u_e" type="email" dir="ltr"></div></div>
+<div class="row"><div><label>كلمة المرور (6 أحرف على الأقل)</label><input id="u_p" dir="ltr"></div><div><label>الصلاحية</label><select id="u_r">${RK.map(r=>`<option value="${r}" ${r=='accountant'?'selected':''}>${ROLES[r].n}</option>`).join('')}</select></div></div>
+<button onclick="usrAdd()">＋ إنشاء المستخدم</button>
+<h4 style="margin:16px 0 6px">جدول الصلاحيات</h4><div style="overflow:auto"><table><tr><th>الصلاحية</th>${RK.map(r=>`<th style="text-align:center">${ROLES[r].n}</th>`).join('')}</tr>${PLAB.map(p=>`<tr><td>${p[1]}</td>${RK.map(r=>`<td style="text-align:center">${PERM[r].includes(p[0])?'✔':'—'}</td>`).join('')}</tr>`).join('')}</table></div></div>`}
+async function usrAdd(){if(need('users'))return;const n=$('#u_n').value.trim(),e=$('#u_e').value.trim(),p=$('#u_p').value,r=$('#u_r').value;
+if(!n||!e)return toast('الاسم والبريد مطلوبان',1);if(p.length<6)return toast('كلمة المرور 6 أحرف على الأقل',1);
+try{const sec=firebase.apps.find(a=>a.name=='sec')||firebase.initializeApp(FB,'sec');const c=await sec.auth().createUserWithEmailAndPassword(e,p);await sec.auth().signOut();
+const u={id:c.user.uid,name:n,email:e,role:r,active:true,at:Date.now(),by:ME.name};put('users',u);log('إضافة مستخدم',{id:u.id,name:n+' — '+ROLES[r].n});toast('تم إنشاء المستخدم. سلّمه البريد وكلمة المرور.');render()}catch(x){toast(aerr(x),1)}}
+function usrRole(id,r){if(need('users')||id==ME.uid)return;const u=D.users[id];if(!u)return;put('users',{...u,role:r});log('تغيير صلاحية',{id,name:u.name+' ← '+ROLES[r].n},u);toast('تم تحديث الصلاحية')}
+function usrToggle(id){if(need('users')||id==ME.uid)return;const u=D.users[id];if(!u)return;const off=u.active!==false;if(!confirm((off?'إيقاف':'تفعيل')+' المستخدم "'+u.name+'"؟'))return;put('users',{...u,active:!off});log(off?'إيقاف مستخدم':'تفعيل مستخدم',{id,name:u.name},u);render()}
+async function usrReset(id){if(need('users'))return;const u=D.users[id];if(!u)return;try{await auth.sendPasswordResetEmail(u.email);toast('تم إرسال رابط تغيير كلمة المرور إلى '+u.email)}catch(x){toast(aerr(x),1)}}
+function usrDel(id){if(need('users')||id==ME.uid)return;const u=D.users[id];if(!u)return;if(!confirm('حذف المستخدم "'+u.name+'"؟ سيفقد الدخول للنظام فورًا.\n(حسابه يبقى في Firebase Authentication ويمكنك حذفه من الـ Console.)'))return;del('users',id);log('حذف مستخدم',{id,name:u.name},u);render()}
 if(localStorage.getItem('sup_theme')=='dark')$('#thm').textContent='☀️';
-render();
+initAuth();
+
 </script></body></html>
